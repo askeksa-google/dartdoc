@@ -23,6 +23,7 @@ const _partials = const <String>[
   'documentation',
   'name_summary',
   'sidebar_for_class',
+  'sidebar_for_category',
   'sidebar_for_enum',
   'source_code',
   'sidebar_for_library',
@@ -78,6 +79,7 @@ Future<String> _getTemplateFile(String templateFileName) =>
     loader.loadAsString('package:dartdoc/templates/$templateFileName');
 
 class Templates {
+  final TemplateRenderer categoryTemplate;
   final TemplateRenderer classTemplate;
   final TemplateRenderer enumTemplate;
   final TemplateRenderer constantTemplate;
@@ -113,6 +115,7 @@ class Templates {
 
     var indexTemplate = await _loadTemplate('index.html');
     var libraryTemplate = await _loadTemplate('library.html');
+    var categoryTemplate = await _loadTemplate('category.html');
     var classTemplate = await _loadTemplate('class.html');
     var enumTemplate = await _loadTemplate('enum.html');
     var functionTemplate = await _loadTemplate('function.html');
@@ -128,6 +131,7 @@ class Templates {
 
     return new Templates._(
         indexTemplate,
+        categoryTemplate,
         libraryTemplate,
         classTemplate,
         enumTemplate,
@@ -143,6 +147,7 @@ class Templates {
 
   Templates._(
       this.indexTemplate,
+      this.categoryTemplate,
       this.libraryTemplate,
       this.classTemplate,
       this.enumTemplate,

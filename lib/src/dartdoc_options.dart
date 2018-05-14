@@ -102,6 +102,11 @@ class _OptionValueWithContext<T> {
           .toList() as T;
     } else if (value is String) {
       return pathContext.canonicalize(resolveTildePath(value as String)) as T;
+    } else if (value is Map<String, String>) {
+      return (value as Map<String, String>)
+          .map((String mapKey, String mapValue) =>
+             new MapEntry<String, String>(mapKey, pathContext.canonicalize(resolveTildePath(mapValue))))
+          .cast<String, String>() as T;
     } else {
       throw new UnsupportedError('Type $T is not supported for resolvedValue');
     }
@@ -143,7 +148,7 @@ abstract class DartdocOption<T> {
   DartdocOption._(this.name, this.defaultsTo, this.help, this.isDir,
       this.isFile, this.mustExist) {
     assert(!(isDir && isFile));
-    if (isDir || isFile) assert(_isString || _isListString);
+    if (isDir || isFile) assert(_isString || _isListString || _isMapString);
     if (mustExist) {
       assert(isDir || isFile);
     }
@@ -198,8 +203,10 @@ abstract class DartdocOption<T> {
     List<String> resolvedPaths;
     if (valueWithContext.value is String) {
       resolvedPaths = [valueWithContext.resolvedValue];
-    } else {
+    } else if (valueWithContext.value is List<String>){
       resolvedPaths = valueWithContext.resolvedValue.toList();
+    } else if (valueWithContext.value is Map<String, String>) {
+      resolvedPaths = valueWithContext.resolvedValue.values.toList();
     }
     for (String path in resolvedPaths) {
       FileSystemEntity f = isDir ? new Directory(path) : new File(path);
@@ -916,6 +923,7 @@ class DartdocOptionContext {
   bool get autoIncludeDependencies =>
       optionSet['autoIncludeDependencies'].valueAt(context);
   List<String> get categoryOrder => optionSet['categoryOrder'].valueAt(context);
+  Map<String, String> get categoryMarkdown => optionSet['categoryMarkdown'].valueAt(context);
   List<String> get dropTextFrom => optionSet['dropTextFrom'].valueAt(context);
   String get examplePathPrefix =>
       optionSet['examplePathPrefix'].valueAt(context);
@@ -978,6 +986,11 @@ Future<List<DartdocOption>> createDartdocOptions() async {
         help:
             "A list of categories (not package names) to place first when grouping symbols on dartdoc's sidebar. "
             'Unmentioned categories are sorted after these.'),
+    new DartdocOptionFileOnly<Map<String, String>>('categoryMarkdown', {},
+        help:
+            "A map of category name to markdown for generating category pages.",
+        isFile: true,
+        mustExist: true),
     new DartdocOptionSyntheticOnly<List<String>>('dropTextFrom',
         (DartdocSyntheticOption<List<String>> option, Directory dir) {
       if (option.parent['hideSdkText'].valueAt(dir)) {

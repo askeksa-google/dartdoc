@@ -9,11 +9,11 @@
     {{#defaultCategory.publicLibraries}}
       <li>{{{linkedName}}}</li>
     {{/defaultCategory.publicLibraries}}
-    {{#categories}}
+    {{#categoriesWithPublicLibraries}}
       <li class="section-subtitle">{{name}}</li>
       {{#publicLibraries}}
         <li class="section-subitem">{{{linkedName}}}</li>
       {{/publicLibraries}}
-    {{/categories}}
+    {{/categoriesWithPublicLibraries}}
   {{/packageGraph.localPackages}}
 </ol>

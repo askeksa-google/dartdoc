@@ -691,6 +691,13 @@ class SpecialList<E> extends ListBase<E> {
 /// This inherits operators.
 class ExtraSpecialList<E> extends SpecialList {}
 
+/// Category information should not follow inheritance.
+///
+/// {@category Excellent}
+/// {@category More Excellence}
+/// {@subCategory Things and Such}
+/// {@image https://flutter.io/images/catalog-widget-placeholder.png}
+/// {@samples https://flutter.io}
 class BaseForDocComments {
   /// Takes a [value] and returns a String.
   ///
@@ -735,6 +742,7 @@ class BaseForDocComments {
 }
 
 /// Testing if docs for inherited method are correct.
+/// {@category NotSoExcellent}
 class SubForDocComments extends BaseForDocComments {
   /// Reference to [foo] and [bar]
   void localMethod(String foo, bar) {}

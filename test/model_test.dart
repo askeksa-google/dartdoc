@@ -24,6 +24,8 @@ class TestLibraryContainer extends LibraryContainer {
   final String name;
   @override
   bool get isSdk => false;
+  @override
+  final PackageGraph packageGraph = null;
 
   TestLibraryContainer(
       this.name, this.containerOrder, LibraryContainer enclosingContainer) {
@@ -117,15 +119,38 @@ void main() {
       expect(packageGraph.localPackages.first.hasCategories, isTrue);
       List<Category> packageCategories =
           packageGraph.localPackages.first.categories;
-      expect(packageCategories.length, equals(3));
-      expect(packageCategories.map((c) => c.name).toList(),
-          orderedEquals(['Real Libraries', 'Unreal', 'Misc']));
+      expect(packageCategories.length, equals(6));
+      expect(
+          packageGraph.localPackages.first.categoriesWithPublicLibraries.length,
+          equals(3));
+      expect(
+          packageCategories.map((c) => c.name).toList(),
+          orderedEquals([
+            'Real Libraries',
+            'Unreal',
+            'Excellent',
+            'Misc',
+            'More Excellence',
+            'NotSoExcellent'
+          ]));
       expect(packageCategories.map((c) => c.libraries.length).toList(),
-          orderedEquals([2, 2, 1]));
+          orderedEquals([3, 2, 0, 1, 0, 0]));
       expect(
           packageGraph
               .localPackages.first.defaultCategory.publicLibraries.length,
           equals(3));
+    });
+
+    test('Verify libraries with multiple categories show up in multiple places',
+        () {
+      List<Category> packageCategories =
+          packageGraph.publicPackages.first.categories;
+      Category realLibraries =
+          packageCategories.firstWhere((c) => c.name == 'Real Libraries');
+      Category misc = packageCategories.firstWhere((c) => c.name == 'Misc');
+      expect(
+          realLibraries.libraries.map((l) => l.name), contains('two_exports'));
+      expect(misc.libraries.map((l) => l.name), contains('two_exports'));
     });
 
     test('Verify that packages without categories get handled', () {

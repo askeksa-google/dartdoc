@@ -1180,12 +1180,13 @@ abstract class Categorization implements ModelElement {
     Set<String> _subCategorySet = new Set();
     _hasCategorization = false;
     final categoryRegexp = new RegExp(
-        r'[ ]*{@(category|subCategory|image|samples) (.+?)}[ ]*\n?',
+        r'[ ]*{@(api|category|subCategory|image|samples) (.+?)}[ ]*\n?',
         multiLine: true);
     rawDocs = rawDocs.replaceAllMapped(categoryRegexp, (match) {
       _hasCategorization = true;
       switch (match[1]) {
         case 'category':
+        case 'api':
           _categorySet.add(match[2].trim());
           break;
         case 'subCategory':
@@ -4838,12 +4839,12 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   String get fullyQualifiedName => name;
 
   @override
-  String get href => isCanonical ? '${package.baseHref}categories/${name}-category.html' : null;
+  String get href => isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
 
   @override
   bool get isCanonical => config.categoryMarkdown.containsKey(name);
 
-  String get kind => 'category';
+  String get kind => 'API';
 
   FileContents _documentationFile;
   @override

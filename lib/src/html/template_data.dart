@@ -126,18 +126,18 @@ class CategoryTemplateData extends TemplateData<Category> {
       : super(htmlOptions, packageGraph);
 
   @override
-  String get title => '${category.name} category - Dart API';
+  String get title => '${category.name} ${category.kind} - Dart API';
 
   @override
   String get htmlBase => '..';
 
   @override
   String get layoutTitle =>
-      _layoutTitle(category.name, 'category', false);
+      _layoutTitle(category.name, category.kind, false);
 
   @override
   String get metaDescription =>
-      '${category.name} category API docs, for the Dart programming language.';
+      '${category.name} ${category.kind} docs, for the Dart programming language.';
 
   @override
   List get navLinks => [packageGraph];

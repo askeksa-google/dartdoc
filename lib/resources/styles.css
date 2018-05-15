@@ -393,6 +393,21 @@ dl dt.callable .name {
   text-decoration: line-through;
 }
 
+.category {
+  vertical-align: middle;
+  margin-top: -4px;
+  padding: 6px;
+  font-size: 12px;
+  border-radius: 2px;
+  background-color: #B6B6B6;
+  text-transform: uppercase;
+  color: white;
+}
+
+.category a {
+  color: white;
+}
+
 p.firstline {
   font-weight: bold;
 }

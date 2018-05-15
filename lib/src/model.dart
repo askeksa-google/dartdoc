@@ -1269,6 +1269,9 @@ abstract class Categorization implements ModelElement {
 
   bool _hasCategorization;
 
+  Iterable<Category> _categories;
+  Iterable<Category> get categories => categoryNames.map((n) => package.nameToCategory[n]);
+
   /// True if categories, subcategories, a documentation icon, or samples were
   /// declared.
   bool get hasCategorization {
@@ -4840,6 +4843,17 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
 
   @override
   String get href => isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
+
+  @override
+  String get linkedName {
+    if (isDocumented) {
+      return '<a href="$href">$name</a>';
+    } else {
+     return name;
+    }
+  }
+
+  String get spanClass => name.split(' ').join('-').toLowerCase();
 
   @override
   bool get isCanonical => config.categoryMarkdown.containsKey(name);

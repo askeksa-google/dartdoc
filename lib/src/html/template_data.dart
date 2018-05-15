@@ -140,7 +140,7 @@ class CategoryTemplateData extends TemplateData<Category> {
       '${category.name} ${category.kind} docs, for the Dart programming language.';
 
   @override
-  List get navLinks => [packageGraph];
+  List get navLinks => [category.package];
   @override
   Iterable<Subnav> getSubNavItems() sync* {
     if (category.hasPublicClasses)

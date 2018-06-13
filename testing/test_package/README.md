@@ -1,5 +1,13 @@
 # Best Package
 
+This package has subheaders:
+
+* [Amazing Package](#amazing-package)
+* [Awesome Code](#awesome-code)
+* [Other Things](#other-things)
+
+## Amazing Package
+
 This is an amazing package.
 
 For example, it:
@@ -9,6 +17,8 @@ For example, it:
 * Is free
 
 It also has some awesome code
+
+## Awesome Code
 
 ```dart
 void main() {
@@ -56,7 +66,10 @@ var f = function(a, b) {
 };
 ```
 
+## Other things
+
 It sometimes generates warnings in commentRefs like this: [unknownThingy.FromSomewhere]
+
 
 Be sure to check out other awesome packages on [pub][].
 

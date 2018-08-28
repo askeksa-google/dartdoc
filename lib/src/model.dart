@@ -5071,7 +5071,7 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   }
 
   @override
-  // TODO(jcollins-g): make [Package] a [Warnable]?
+  // TODO(jcollins-g): make [Category] a [Warnable]?
   Warnable get enclosingElement => null;
 
   @override
@@ -5113,15 +5113,24 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   @override
   String get href => isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
 
-  @override
   String get linkedName {
     if (isDocumented) {
-      return '<a href="$href">$name</a>';
+      return '<a href="$href">${name.replaceAll(' ', '&nbsp;')}</a>';
     } else {
      return name;
     }
   }
 
+  String _categoryNumberClass;
+  /// The position in the container order for this category.
+  String get categoryNumberClass {
+    if (_categoryNumberClass == null) {
+      _categoryNumberClass = "cp-${package.categories.indexOf(this)}";
+    }
+    return _categoryNumberClass;
+  }
+
+  /// Category name used in template as part of the class.
   String get spanClass => name.split(' ').join('-').toLowerCase();
 
   @override

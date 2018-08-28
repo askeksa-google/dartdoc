@@ -22,12 +22,12 @@ import 'package:dartdoc/src/html/html_generator.dart';
 import 'package:dartdoc/src/logging.dart';
 import 'package:dartdoc/src/model.dart';
 import 'package:dartdoc/src/package_meta.dart';
+import 'package:dartdoc/src/tuple.dart';
 import 'package:dartdoc/src/utils.dart';
 import 'package:dartdoc/src/warnings.dart';
 import 'package:html/dom.dart' show Element, Document;
 import 'package:html/parser.dart' show parse;
 import 'package:path/path.dart' as pathLib;
-import 'package:tuple/tuple.dart';
 
 export 'package:dartdoc/src/dartdoc_options.dart';
 export 'package:dartdoc/src/element_type.dart';
@@ -37,7 +37,7 @@ export 'package:dartdoc/src/package_meta.dart';
 
 const String name = 'dartdoc';
 // Update when pubspec version changes.
-const String dartdocVersion = '0.19.1';
+const String dartdocVersion = '0.20.4';
 
 /// Helper class to initialize the default generators since they require
 /// GeneratorContext.
@@ -79,7 +79,7 @@ class Dartdoc extends PackageBuilder {
   Stream<String> get onCheckProgress => _onCheckProgress.stream;
 
   @override
-  void logAnalysisErrors(Set<Source> sources) async {
+  Future<void> logAnalysisErrors(Set<Source> sources) async {
     List<AnalysisErrorInfo> errorInfos = [];
     // TODO(jcollins-g): figure out why sources can't contain includeExternals
     // or embedded SDK components without having spurious(?) analysis errors.
@@ -133,7 +133,7 @@ class Dartdoc extends PackageBuilder {
   /// [DartdocResults] is returned if dartdoc succeeds. [DartdocFailure] is
   /// thrown if dartdoc fails in an expected way, for example if there is an
   /// analysis error in the code.
-  Future<DartdocResults> generateDocs() async {
+  Future<DartdocResults> generateDocsBase() async {
     Stopwatch _stopwatch = new Stopwatch()..start();
     double seconds;
     packageGraph = await buildPackageGraph();
@@ -167,18 +167,22 @@ class Dartdoc extends PackageBuilder {
     logInfo(
         "Documented ${packageGraph.publicLibraries.length} public librar${packageGraph.publicLibraries.length == 1 ? 'y' : 'ies'} "
         "in ${seconds.toStringAsFixed(1)} seconds");
+    return new DartdocResults(
+        config.topLevelPackageMeta, packageGraph, outputDir);
+  }
 
-    if (packageGraph.publicLibraries.isEmpty) {
+  Future<DartdocResults> generateDocs() async {
+    DartdocResults dartdocResults = await generateDocsBase();
+    if (dartdocResults.packageGraph.publicLibraries.isEmpty) {
       throw new DartdocFailure(
           "dartdoc could not find any libraries to document. Run `pub get` and try again.");
     }
 
-    if (packageGraph.packageWarningCounter.errorCount > 0) {
+    if (dartdocResults.packageGraph.packageWarningCounter.errorCount > 0) {
       throw new DartdocFailure("dartdoc encountered errors while processing");
     }
 
-    return new DartdocResults(
-        config.topLevelPackageMeta, packageGraph, outputDir);
+    return dartdocResults;
   }
 
   /// Warn on file paths.
@@ -247,12 +251,17 @@ class Dartdoc extends PackageBuilder {
         continue;
       }
       if (visited.contains(fullPath)) continue;
-      if (!writtenFiles.contains(fullPath)) {
+      String relativeFullPath = pathLib.relative(fullPath, from: normalOrigin);
+      if (!writtenFiles.contains(relativeFullPath)) {
         // This isn't a file we wrote (this time); don't claim we did.
         _warn(packageGraph, PackageWarning.unknownFile, fullPath, normalOrigin);
       } else {
-        _warn(
-            packageGraph, PackageWarning.orphanedFile, fullPath, normalOrigin);
+        // Error messages are orphaned by design and do not appear in the search
+        // index.
+        if (relativeFullPath != '__404error.html') {
+          _warn(packageGraph, PackageWarning.orphanedFile, fullPath,
+              normalOrigin);
+        }
       }
       _onCheckProgress.add(fullPath);
     }

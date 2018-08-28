@@ -5,7 +5,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:dartdoc/src/logging.dart';
 import 'package:dartdoc/src/model.dart';
-import 'package:tuple/tuple.dart';
+import 'package:dartdoc/src/tuple.dart';
 
 class PackageWarningHelpText {
   final String warningName;
@@ -90,6 +90,14 @@ final Map<PackageWarning, PackageWarningHelpText> packageWarningText = const {
       PackageWarning.invalidParameter,
       "invalidParameter",
       "A parameter given to a dartdoc directive was invalid."),
+  PackageWarning.deprecated: const PackageWarningHelpText(
+      PackageWarning.deprecated,
+      "deprecated",
+      "A dartdoc directive has a deprecated format."),
+  PackageWarning.unresolvedExport: const PackageWarningHelpText(
+      PackageWarning.unresolvedExport,
+      "unresolvedExport",
+      "An export refers to a URI that can not be resolved."),
 };
 
 /// Something that package warnings can be called on.  Optionally associated
@@ -130,6 +138,8 @@ enum PackageWarning {
   missingFromSearchIndex,
   typeAsHtml,
   invalidParameter,
+  deprecated,
+  unresolvedExport,
 }
 
 /// Warnings it is OK to skip if we can determine the warnable isn't documented.
@@ -153,6 +163,7 @@ class PackageWarningOptions {
   PackageWarningOptions(this.verboseWarnings) {
     asWarnings.addAll(PackageWarning.values);
     ignore(PackageWarning.typeAsHtml);
+    error(PackageWarning.unresolvedExport);
   }
 
   void _assertInvariantsOk() {
@@ -189,7 +200,7 @@ class PackageWarningOptions {
 }
 
 class PackageWarningCounter {
-  final _countedWarnings =
+  final countedWarnings =
       new Map<Element, Set<Tuple2<PackageWarning, String>>>();
   final _warningCounts = new Map<PackageWarning, int>();
   final PackageWarningOptions options;
@@ -244,8 +255,8 @@ class PackageWarningCounter {
   /// Returns true if we've already warned for this.
   bool hasWarning(Warnable element, PackageWarning kind, String message) {
     Tuple2<PackageWarning, String> warningData = new Tuple2(kind, message);
-    if (_countedWarnings.containsKey(element?.element)) {
-      return _countedWarnings[element?.element].contains(warningData);
+    if (countedWarnings.containsKey(element?.element)) {
+      return countedWarnings[element?.element].contains(warningData);
     }
     return false;
   }
@@ -258,8 +269,8 @@ class PackageWarningCounter {
     Tuple2<PackageWarning, String> warningData = new Tuple2(kind, message);
     _warningCounts.putIfAbsent(kind, () => 0);
     _warningCounts[kind] += 1;
-    _countedWarnings.putIfAbsent(element?.element, () => new Set());
-    _countedWarnings[element?.element].add(warningData);
+    countedWarnings.putIfAbsent(element?.element, () => new Set());
+    countedWarnings[element?.element].add(warningData);
     _writeWarning(kind, element?.fullyQualifiedName, fullMessage);
   }
 

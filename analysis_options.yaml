@@ -1,15 +1,14 @@
 analyzer:
-  strong-mode: true
   language:
-    enableGenericMethods: true
-    enablePreviewDart2: true
     enableSuperMixins: true
   exclude:
     - 'doc/**'
+    - 'lib/src/third_party/pkg/**'
     - 'lib/templates/*.html'
     - 'pub.dartlang.org/**'
     - 'testing/**'
     - 'testing/test_package_flutter_plugin/**'
+    - 'testing/test_package_export_error/**'
 linter:
   rules:
     - annotate_overrides

@@ -364,6 +364,7 @@ class DartdocOptionArgSynth<T> extends DartdocOption<T>
       {String abbr,
       bool mustExist = false,
       String help = '',
+      bool hide = false,
       bool isDir = false,
       bool isFile = false,
       bool negatable,
@@ -494,7 +495,7 @@ class DartdocOptionArgOnly<T> extends DartdocOption<T>
       {String abbr,
       bool mustExist = false,
       String help = '',
-      bool hide,
+      bool hide = false,
       bool isDir = false,
       bool isFile = false,
       bool negatable,
@@ -529,7 +530,7 @@ class DartdocOptionArgFile<T> extends DartdocOption<T>
       {String abbr,
       bool mustExist = false,
       String help: '',
-      bool hide,
+      bool hide = false,
       bool isDir = false,
       bool isFile = false,
       bool negatable,
@@ -1034,13 +1035,12 @@ Future<List<DartdocOption>> createDartdocOptions() async {
     // This could be a ArgOnly, but trying to not provide too many ways
     // to set the flutter root.
     new DartdocOptionSyntheticOnly<String>(
-      'flutterRoot',
-      (DartdocSyntheticOption<String> option, Directory dir) =>
-          resolveTildePath(Platform.environment['FLUTTER_ROOT']),
-      isDir: true,
-      help: 'Root of the Flutter SDK, specified from environment.',
-      mustExist: true,
-    ),
+        'flutterRoot',
+        (DartdocSyntheticOption<String> option, Directory dir) =>
+            resolveTildePath(Platform.environment['FLUTTER_ROOT']),
+        isDir: true,
+        help: 'Root of the Flutter SDK, specified from environment.',
+        mustExist: true),
     new DartdocOptionArgOnly<bool>('hideSdkText', false,
         hide: true,
         help:
@@ -1132,8 +1132,12 @@ Future<List<DartdocOption>> createDartdocOptions() async {
       if (!option.parent['sdkDocs'].valueAt(dir) &&
           (option.root['topLevelPackageMeta'].valueAt(dir) as PackageMeta)
               .requiresFlutter) {
-        return pathLib.join(option.root['flutterRoot'].valueAt(dir), 'bin',
-            'cache', 'dart-sdk');
+        String flutterRoot = option.root['flutterRoot'].valueAt(dir);
+        if (flutterRoot == null) {
+          throw new DartdocOptionError(
+              'Top level package requires Flutter but FLUTTER_ROOT environment variable not set');
+        }
+        return pathLib.join(flutterRoot, 'bin', 'cache', 'dart-sdk');
       }
       return defaultSdkDir.absolute.path;
     }, help: 'Path to the SDK directory.', isDir: true, mustExist: true),

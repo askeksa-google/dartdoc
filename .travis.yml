@@ -2,16 +2,20 @@ language: dart
 sudo: false
 dart:
   - "dev/raw/latest"
+  - stable
 env:
   - DARTDOC_BOT=main
-  # TODO(devoncarew): add angulardart support
-  #- DARTDOC_BOT=angular
+  - DARTDOC_BOT=packages
   - DARTDOC_BOT=flutter
   - DARTDOC_BOT=sdk-docs
 script: ./tool/travis.sh
+
+os:
+  - osx
+  - linux
+
 branches:
-  only:
-    - master
+  only: [master]
 cache:
   directories:
   - $HOME/.pub-cache

@@ -48,9 +48,7 @@ library fake;
 
 import 'dart:async';
 import 'dart:collection';
-
-import 'package:tuple/tuple.dart';
-
+import 'package:meta/meta.dart' show Required;
 import 'css.dart' as css;
 import 'example.dart';
 import 'two_exports.dart' show BaseClass;
@@ -91,6 +89,21 @@ class HasGenerics<X, Y, Z> {
   Map<X, Y> convertToMap() => null;
 }
 
+/// Bullet point documentation.
+///
+/// This top level constant has bullet points.
+///
+/// * A bullet point.
+/// * Another even better bullet point.
+/// * A bullet point that wraps onto a second line, without creating a new
+///   bullet point or paragraph.
+/// * A fourth bullet point.
+const String bulletDoced = 'Foo bar baz';
+
+/// This class uses a pragma annotation.
+@pragma('Hello world')
+class HasPragma {}
+
 /// This is a class with a table.
 ///
 /// It has multiple sentences before the table.  Because testing is a good
@@ -125,9 +138,13 @@ class DocumentWithATable {
   void aMethod(String parameter) {}
 }
 
+/// A doc reference mentioning [dynamic].
+dynamic get mustGetThis => null;
+
 Map<dynamic, String> mapWithDynamicKeys = {};
 
-Tuple2<String, String> useSomethingInAnotherPackage;
+Required useSomethingInAnotherPackage;
+String useSomethingInTheSdk;
 
 /// Useful for annotations.
 class Annotation {
@@ -734,6 +751,10 @@ class BaseForDocComments {
   /// Reference to a bracket operator within this class [operator []] xxx
   ///
   /// Reference to a bracket operator in another class [SpecialList.operator []] xxx
+  ///
+  /// Reference containing a type parameter [ExtraSpecialList<Object>]
+  ///
+  /// Reference to something that doesn't exist containing a type parameter [ThisIsNotHereNoWay<MyType>]
   String doAwesomeStuff(int value) => null;
 
   void anotherMethod() {}

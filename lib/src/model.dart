@@ -35,6 +35,7 @@ import 'package:analyzer/src/generated/source_io.dart';
 import 'package:analyzer/src/dart/element/member.dart'
     show ExecutableMember, Member, ParameterMember;
 import 'package:analyzer/src/dart/analysis/driver.dart';
+import 'package:args/args.dart';
 import 'package:collection/collection.dart';
 import 'package:dartdoc/src/dartdoc_options.dart';
 import 'package:dartdoc/src/element_type.dart';
@@ -44,13 +45,14 @@ import 'package:dartdoc/src/logging.dart';
 import 'package:dartdoc/src/markdown_processor.dart' show Documentation;
 import 'package:dartdoc/src/model_utils.dart';
 import 'package:dartdoc/src/package_meta.dart' show PackageMeta, FileContents;
+import 'package:dartdoc/src/special_elements.dart';
+import 'package:dartdoc/src/tuple.dart';
 import 'package:dartdoc/src/utils.dart';
 import 'package:dartdoc/src/warnings.dart';
 import 'package:front_end/src/byte_store/byte_store.dart';
 import 'package:front_end/src/base/performance_logger.dart';
 import 'package:path/path.dart' as pathLib;
 import 'package:pub_semver/pub_semver.dart';
-import 'package:tuple/tuple.dart';
 import 'package:package_config/discovery.dart' as package_config;
 
 int byName(Nameable a, Nameable b) =>
@@ -180,18 +182,17 @@ abstract class Inheritable implements ModelElement {
   List<Class> get inheritance {
     List<Class> inheritance = [];
     inheritance.addAll((enclosingElement as Class).inheritanceChain);
+    Class object = packageGraph.specialClasses[SpecialClass.object];
     if (!inheritance.contains(definingEnclosingElement) &&
         definingEnclosingElement != null) {
-      assert(definingEnclosingElement == packageGraph.objectElement);
+      assert(definingEnclosingElement == object);
     }
     // Unless the code explicitly extends dart-core's Object, we won't get
     // an entry here.  So add it.
-    if (inheritance.last != packageGraph.objectElement &&
-        packageGraph.objectElement != null) {
-      inheritance.add(packageGraph.objectElement);
+    if (inheritance.last != object && object != null) {
+      inheritance.add(object);
     }
-    assert(
-        inheritance.where((e) => e == packageGraph.objectElement).length == 1);
+    assert(inheritance.where((e) => e == object).length == 1);
     return inheritance;
   }
 }
@@ -1346,11 +1347,18 @@ class Dynamic extends ModelElement {
   Dynamic(Element element, PackageGraph packageGraph)
       : super(element, null, packageGraph, null);
 
+  /// [dynamic] is not a real object, and so we can't document it, so there
+  /// can be nothing canonical for it.
+  @override
+  ModelElement get canonicalModelElement => null;
+
   @override
   ModelElement get enclosingElement => throw new UnsupportedError('');
 
+  /// And similiarly, even if someone references it directly it can have
+  /// no hyperlink.
   @override
-  String get href => throw new StateError('dynamic should not have an href');
+  String get href => null;
 
   @override
   String get kind => 'dynamic';
@@ -1718,7 +1726,7 @@ abstract class GetterSetterCombo implements ModelElement {
           buffer.write('${getter.oneLineDoc}');
         }
         if (hasPublicSetter && setter.oneLineDoc.isNotEmpty) {
-          buffer.write('${getterSetterBothAvailable ? "": setter.oneLineDoc}');
+          buffer.write('${getterSetterBothAvailable ? "" : setter.oneLineDoc}');
         }
         _oneLineDoc = buffer.toString();
       }
@@ -2656,21 +2664,6 @@ abstract class ModelElement extends Canonicalization
         if (e is ClassElement) {
           if (!e.isEnum) {
             newModelElement = new Class(e, library, packageGraph);
-            if (newModelElement.name == 'Object' &&
-                newModelElement.library.name == 'dart:core') {
-              // We've found Object.  This is an important object, so save it in the package.
-              assert(
-                  newModelElement.library.packageGraph._objectElement == null);
-              newModelElement.library.packageGraph._objectElement =
-                  newModelElement;
-            }
-            if (newModelElement.name == 'Interceptor' &&
-                newModelElement.library.name == 'dart:_interceptors') {
-              // We've found Interceptor.  Another important object.
-              assert(!newModelElement.library.packageGraph._interceptorUsed);
-              newModelElement.library.packageGraph.interceptor =
-                  newModelElement;
-            }
           } else {
             newModelElement = new Enum(e, library, packageGraph);
           }
@@ -2806,16 +2799,42 @@ abstract class ModelElement extends Canonicalization
 
   /// Returns linked annotations from a given metadata set, with escaping.
   List<String> annotationsFromMetadata(List<ElementAnnotation> md) {
-    if (md == null) return <String>[];
-    return md.map((ElementAnnotation a) {
+    List<String> annotationStrings = [];
+    if (md == null) return annotationStrings;
+    for (ElementAnnotation a in md) {
       String annotation = (const HtmlEscape()).convert(a.toSource());
-      // a.element can be null if the element can't be resolved.
-      var me = packageGraph
-          .findCanonicalModelElementFor(a.element?.enclosingElement);
-      if (me != null)
-        annotation = annotation.replaceFirst(me.name, me.linkedName);
-      return annotation;
-    }).toList(growable: false);
+      Element annotationElement = a.element;
+
+      ClassElement annotationClassElement;
+      if (annotationElement is ExecutableElement) {
+        annotationElement = (annotationElement as ExecutableElement)
+            .returnType
+            .element as ClassElement;
+      }
+      if (annotationElement is ClassElement) {
+        annotationClassElement = annotationElement;
+      }
+      ModelElement annotationModelElement =
+          packageGraph.findCanonicalModelElementFor(annotationElement);
+      // annotationElement can be null if the element can't be resolved.
+      Class annotationClass = packageGraph
+          .findCanonicalModelElementFor(annotationClassElement) as Class;
+      if (annotationClass == null && annotationElement != null) {
+        annotationClass =
+            new ModelElement.fromElement(annotationClassElement, packageGraph)
+                as Class;
+      }
+      // Some annotations are intended to be invisible (@pragma)
+      if (annotationClass == null ||
+          !packageGraph.invisibleAnnotations.contains(annotationClass)) {
+        if (annotationModelElement != null) {
+          annotation = annotation.replaceFirst(
+              annotationModelElement.name, annotationModelElement.linkedName);
+        }
+        annotationStrings.add(annotation);
+      }
+    }
+    return annotationStrings;
   }
 
   bool _isPublic;
@@ -3557,12 +3576,9 @@ abstract class ModelElement extends Canonicalization
   ///
   ///     &#123;@example PATH [region=NAME] [lang=NAME]&#125;
   ///
-  /// where PATH and NAME are tokens _without_ whitespace; NAME can optionally be
-  /// quoted (use of quotes is for backwards compatibility and discouraged).
-  ///
   /// If PATH is `dir/file.ext` and region is `r` then we'll look for the file
-  /// named `dir/file-r.ext.md`, relative to the project root directory (of the
-  /// project for which the docs are being generated).
+  /// named `dir/file-r.ext.md`, relative to the project root directory of the
+  /// project for which the docs are being generated.
   ///
   /// Examples: (escaped in this comment to show literal values in dartdoc's
   ///            dartdoc)
@@ -3575,6 +3591,10 @@ abstract class ModelElement extends Canonicalization
     RegExp exampleRE = new RegExp(r'{@example\s+([^}]+)}');
     return rawdocs.replaceAllMapped(exampleRE, (match) {
       var args = _getExampleArgs(match[1]);
+      if (args == null) {
+        // Already warned about an invalid parameter if this happens.
+        return '';
+      }
       var lang =
           args['lang'] ?? pathLib.extension(args['src']).replaceFirst('.', '');
 
@@ -3603,17 +3623,19 @@ abstract class ModelElement extends Canonicalization
   ///
   /// Syntax:
   ///
-  ///     &#123;@animation NAME WIDTH HEIGHT URL&#125;
+  ///     &#123;@animation WIDTH HEIGHT URL [id=ID]&#125;
   ///
   /// Example:
   ///
-  ///     &#123;@animation my_video 300 300 https://example.com/path/to/video.mp4&#125;
+  ///     &#123;@animation 300 300 https://example.com/path/to/video.mp4 id="my_video"&#125;
   ///
   /// Which will render the HTML necessary for embedding a simple click-to-play
-  /// HTML5 video player with no controls.
+  /// HTML5 video player with no controls that has an HTML id of "my_video".
   ///
-  /// The NAME should be a unique name that is a valid javascript identifier,
-  /// and will be used as the id for the video tag.
+  /// The optional ID should be a unique id that is a valid JavaScript
+  /// identifier, and will be used as the id for the video tag. If no ID is
+  /// supplied, then a unique identifier (starting with "animation_") will be
+  /// generated.
   ///
   /// The width and height must be integers specifying the dimensions of the
   /// video file in pixels.
@@ -3624,74 +3646,101 @@ abstract class ModelElement extends Canonicalization
     final RegExp basicAnimationRegExp =
         new RegExp(r'''{@animation\s+([^}]+)}''');
 
-    // Animations have four parameters, and the last one can be surrounded by
-    // quotes (which are ignored). This RegExp is used to validate the directive
-    // for the correct number of parameters.
-    final RegExp animationRegExp =
-        new RegExp(r'''{@animation\s+([^}\s]+)\s+([^}\s]+)\s+([^}\s]+)'''
-            r'''\s+['"]?([^}]+)['"]?}''');
-
     // Matches valid javascript identifiers.
-    final RegExp validNameRegExp = new RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$');
+    final RegExp validIdRegExp = new RegExp(r'^[a-zA-Z_]\w*$');
 
-    // Keeps names unique.
-    final Set<String> uniqueNames = new Set<String>();
+    final Set<String> uniqueIds = new Set<String>();
+    String getUniqueId(String base) {
+      int count = 1;
+      String id = '$base$count';
+      while (uniqueIds.contains(id)) {
+        count++;
+        id = '$base$count';
+      }
+      return id;
+    }
 
     return rawDocs.replaceAllMapped(basicAnimationRegExp, (basicMatch) {
-      final Match match = animationRegExp.firstMatch(basicMatch[0]);
-      if (match == null) {
-        warn(PackageWarning.invalidParameter,
-            message: 'Invalid @animation directive: ${basicMatch[0]}\n'
-                'Animation directives must be of the form: {@animation NAME '
-                'WIDTH HEIGHT URL}');
+      final ArgParser parser = new ArgParser();
+      parser.addOption('id');
+      final ArgResults args = _parseArgs(basicMatch[1], parser, 'animation');
+      if (args == null) {
+        // Already warned about an invalid parameter if this happens.
         return '';
       }
-      String name = match[1];
-      if (!validNameRegExp.hasMatch(name)) {
-        warn(PackageWarning.invalidParameter,
-            message: 'An animation has an invalid name: $name. The name can '
-                'only contain letters, numbers and underscores.');
-        return '';
+      final List<String> positionalArgs = args.rest.sublist(0);
+      String uniqueId;
+      bool wasDeprecated = false;
+      if (positionalArgs.length == 4) {
+        // Supports the original form of the animation tag for backward
+        // compatibility.
+        uniqueId = positionalArgs.removeAt(0);
+        wasDeprecated = true;
+      } else if (positionalArgs.length == 3) {
+        uniqueId = args['id'] ?? getUniqueId('animation_');
       } else {
-        if (uniqueNames.contains(name)) {
-          warn(PackageWarning.invalidParameter,
-              message:
-                  'An animation has a non-unique name: $name. Animation names '
-                  'must be unique.');
-          return '';
-        }
-        uniqueNames.add(name);
+        warn(PackageWarning.invalidParameter,
+            message: 'Invalid @animation directive, "${basicMatch[0]}"\n'
+                'Animation directives must be of the form "{@animation WIDTH '
+                'HEIGHT URL [id=ID]}"');
+        return '';
       }
+
+      if (!validIdRegExp.hasMatch(uniqueId)) {
+        warn(PackageWarning.invalidParameter,
+            message: 'An animation has an invalid identifier, "$uniqueId". The '
+                'identifier can only contain letters, numbers and underscores, '
+                'and must not begin with a number.');
+        return '';
+      }
+      if (uniqueIds.contains(uniqueId)) {
+        warn(PackageWarning.invalidParameter,
+            message: 'An animation has a non-unique identifier, "$uniqueId". '
+                'Animation identifiers must be unique.');
+        return '';
+      }
+      uniqueIds.add(uniqueId);
+
       int width;
       try {
-        width = int.parse(match[2]);
+        width = int.parse(positionalArgs[0]);
       } on FormatException {
         warn(PackageWarning.invalidParameter,
-            message:
-                'An animation has an invalid width ($name): ${match[2]}. The '
-                'width must be an integer.');
+            message: 'An animation has an invalid width ($uniqueId), '
+                '"${positionalArgs[0]}". The width must be an integer.');
         return '';
       }
+
       int height;
       try {
-        height = int.parse(match[3]);
+        height = int.parse(positionalArgs[1]);
       } on FormatException {
         warn(PackageWarning.invalidParameter,
-            message:
-                'An animation has an invalid height ($name): ${match[3]}. The '
-                'height must be an integer.');
+            message: 'An animation has an invalid height ($uniqueId), '
+                '"${positionalArgs[1]}". The height must be an integer.');
         return '';
       }
+
       Uri movieUrl;
       try {
-        movieUrl = Uri.parse(match[4]);
+        movieUrl = Uri.parse(positionalArgs[2]);
       } on FormatException catch (e) {
         warn(PackageWarning.invalidParameter,
-            message:
-                'An animation URL could not be parsed ($name): ${match[4]}\n$e');
+            message: 'An animation URL could not be parsed ($uniqueId): '
+                '${positionalArgs[2]}\n$e');
         return '';
       }
-      final String overlayName = '${name}_play_button_';
+      final String overlayId = '${uniqueId}_play_button_';
+
+      // Only warn about deprecation if some other warning didn't occur.
+      if (wasDeprecated) {
+        warn(PackageWarning.deprecated,
+            message:
+                'Deprecated form of @animation directive, "${basicMatch[0]}"\n'
+                'Animation directives are now of the form "{@animation '
+                'WIDTH HEIGHT URL [id=ID]}" (id is an optional '
+                'parameter)');
+      }
 
       // Blank lines before and after, and no indenting at the beginning and end
       // is needed so that Markdown doesn't confuse this with code, so be
@@ -3699,12 +3748,12 @@ abstract class ModelElement extends Canonicalization
       return '''
 
 <div style="position: relative;">
-  <div id="${overlayName}"
-       onclick="if ($name.paused) {
-                  $name.play();
+  <div id="${overlayId}"
+       onclick="if ($uniqueId.paused) {
+                  $uniqueId.play();
                   this.style.display = 'none';
                 } else {
-                  $name.pause();
+                  $uniqueId.pause();
                   this.style.display = 'block';
                 }"
        style="position:absolute;
@@ -3715,14 +3764,14 @@ abstract class ModelElement extends Canonicalization
               background-repeat: no-repeat;
               background-image: url(static-assets/play_button.svg);">
   </div>
-  <video id="$name"
+  <video id="$uniqueId"
          style="width:${width}px; height:${height}px;"
          onclick="if (this.paused) {
                     this.play();
-                    $overlayName.style.display = 'none';
+                    $overlayId.style.display = 'none';
                   } else {
                     this.pause();
-                    $overlayName.style.display = 'block';
+                    $overlayId.style.display = 'block';
                   }" loop>
     <source src="$movieUrl" type="video/mp4"/>
   </video>
@@ -3788,29 +3837,80 @@ abstract class ModelElement extends Canonicalization
     });
   }
 
+  /// Helper to process arguments given as a (possibly quoted) string.
+  ///
+  /// First, this will split the given [argsAsString] into separate arguments,
+  /// taking any quoting (either ' or " are accepted) into account, including
+  /// handling backslash-escaped quotes.
+  ///
+  /// Then, it will prepend "--" to any args that start with an identifier
+  /// followed by an equals sign, allowing the argument parser to treat any
+  /// "foo=bar" argument as "--foo=bar". It does handle quoted args like
+  /// "foo='bar baz'" too, returning just bar (without quotes) for the foo
+  /// value.
+  ///
+  /// It then parses the resulting argument list normally with [argParser] and
+  /// returns the result.
+  ArgResults _parseArgs(
+      String argsAsString, ArgParser argParser, String directiveName) {
+    // Regexp to take care of splitting arguments, and handling the quotes
+    // around arguments, if any.
+    //
+    // Match group 1 is the "foo=" part of the option, if any.
+    // Match group 2 contains the quote character used (which is discarded).
+    // Match group 3 is a quoted arg, if any, without the quotes.
+    // Match group 4 is the unquoted arg, if any.
+    final RegExp argMatcher = new RegExp(r'([a-zA-Z\-_0-9]+=)?' // option name
+        r'(?:' // Start a new non-capture group for the two possibilities.
+        r'''(["'])((?:\\{2})*|(?:.*?[^\\](?:\\{2})*))\2|''' // with quotes.
+        r'([^ ]+))'); // without quotes.
+    final Iterable<Match> matches = argMatcher.allMatches(argsAsString);
+
+    // Remove quotes around args, and for any args that look like assignments
+    // (start with valid option names followed by an equals sign), add a "--" in front
+    // so that they parse as options.
+    final Iterable<String> args = matches.map<String>((Match match) {
+      String option = '';
+      if (match[1] != null) {
+        option = '--${match[1]}';
+      }
+      return option + (match[3] ?? '') + (match[4] ?? '');
+    });
+
+    try {
+      return argParser.parse(args);
+    } on ArgParserException catch (e) {
+      warn(PackageWarning.invalidParameter,
+          message: 'The {@$directiveName ...} directive was called with '
+              'invalid parameters. $e');
+      return null;
+    }
+  }
+
   /// Helper for _injectExamples used to process @example arguments.
   /// Returns a map of arguments. The first unnamed argument will have key 'src'.
   /// The computed file path, constructed from 'src' and 'region' will have key
   /// 'file'.
   Map<String, String> _getExampleArgs(String argsAsString) {
-    // Extract PATH and return is under key 'src'
-    var endOfSrc = argsAsString.indexOf(' ');
-    if (endOfSrc < 0) endOfSrc = argsAsString.length;
-    var src = argsAsString.substring(0, endOfSrc);
-    src = src.replaceAll('/', Platform.pathSeparator);
-    final args = {'src': src};
+    ArgParser parser = new ArgParser();
+    parser.addOption('lang');
+    parser.addOption('region');
+    ArgResults results = _parseArgs(argsAsString, parser, 'example');
+    if (results == null) {
+      return null;
+    }
 
-    // Process remaining named arguments
-    var namedArgs = argsAsString.substring(endOfSrc);
-    // Arg value: allow optional quotes; warning: we still don't support whitespace.
-    RegExp keyValueRE = new RegExp('(\\w+)=[\'"]?(\\S*)[\'"]?');
-    Iterable<Match> matches = keyValueRE.allMatches(namedArgs);
-    matches.forEach((match) {
-      // Ignore optional quotes
-      args[match[1]] = match[2].replaceAll(new RegExp('[\'"]'), '');
-    });
+    // Extract PATH and fix the path separators.
+    final String src = results.rest.isEmpty
+        ? ''
+        : results.rest.first.replaceAll('/', Platform.pathSeparator);
+    final Map<String, String> args = <String, String>{
+      'src': src,
+      'lang': results['lang'],
+      'region': results['region'] ?? '',
+    };
 
-    // Compute 'file'
+    // Compute 'file' from region and src.
     final fragExtension = '.md';
     var file = src + fragExtension;
     var region = args['region'] ?? '';
@@ -4005,8 +4105,19 @@ class PackageGraph {
   // TODO(jcollins-g): This constructor is convoluted.  Clean this up by
   // building Libraries and adding them to Packages, then adding Packages
   // to this graph.
-  PackageGraph(Iterable<LibraryElement> libraryElements, this.config,
-      this.packageMeta, this._packageWarningOptions, this.driver, this.sdk) {
+
+  /// Construct a package graph.
+  /// [libraryElements] - Libraries to be documented.
+  /// [specialLibraryElements] - Any libraries that may not be documented, but
+  /// contain required [SpecialClass]es.
+  PackageGraph(
+      Iterable<LibraryElement> libraryElements,
+      Iterable<LibraryElement> specialLibraryElements,
+      this.config,
+      this.packageMeta,
+      this._packageWarningOptions,
+      this.driver,
+      this.sdk) {
     assert(_allConstructedModelElements.isEmpty);
     assert(allLibraries.isEmpty);
     _packageWarningCounter = new PackageWarningCounter(_packageWarningOptions);
@@ -4030,11 +4141,19 @@ class PackageGraph {
     new Package.fromPackageMeta(packageMeta, this);
     allLibrariesAdded = true;
 
+    // [findOrCreateLibraryFor] already adds to the proper structures.
+    specialLibraryElements.forEach((element) {
+      findOrCreateLibraryFor(element);
+    });
+
     // Go through docs of every ModelElement in package to pre-build the macros
     // index.
     allLocalModelElements.forEach((m) => m.documentationLocal);
     _macrosAdded = true;
 
+    // Scan all model elements to insure that interceptor and other special
+    // objects are found.
+    specialClasses = new SpecialClasses(this);
     // After the allModelElements traversal to be sure that all packages
     // are picked up.
     documentedPackages.toList().forEach((package) {
@@ -4046,6 +4165,8 @@ class PackageGraph {
     _implementors.values.forEach((l) => l.sort());
     allImplementorsAdded = true;
   }
+
+  SpecialClasses specialClasses;
 
   /// It is safe to cache values derived from the _implementors table if this
   /// is true.
@@ -4303,6 +4424,12 @@ class PackageGraph {
       case PackageWarning.invalidParameter:
         warningMessage = 'invalid parameter to dartdoc directive: ${message}';
         break;
+      case PackageWarning.deprecated:
+        warningMessage = 'deprecated dartdoc usage: ${message}';
+        break;
+      case PackageWarning.unresolvedExport:
+        warningMessage = 'unresolved export uri: ${message}';
+        break;
     }
 
     List<String> messageParts = [warningMessage];
@@ -4371,11 +4498,26 @@ class PackageGraph {
 
   Map<LibraryElement, Set<Library>> _libraryElementReexportedBy = new Map();
   void _tagReexportsFor(
-      final Library tll, final LibraryElement libraryElement) {
+      final Library topLevelLibrary,
+      final LibraryElement libraryElement,
+      [ExportElement lastExportedElement]) {
+    if (libraryElement == null) {
+      // The first call to _tagReexportFor should not have a null libraryElement.
+      assert(lastExportedElement != null);
+      warnOnElement(
+          findOrCreateLibraryFor(lastExportedElement.enclosingElement),
+          PackageWarning.unresolvedExport,
+          message: '"${lastExportedElement.uri}"',
+          referredFrom: <Locatable>[topLevelLibrary]);
+      return;
+    }
     _libraryElementReexportedBy.putIfAbsent(libraryElement, () => new Set());
-    _libraryElementReexportedBy[libraryElement].add(tll);
+    _libraryElementReexportedBy[libraryElement].add(topLevelLibrary);
     for (ExportElement exportedElement in libraryElement.exports) {
-      _tagReexportsFor(tll, exportedElement.exportedLibrary);
+      _tagReexportsFor(
+          topLevelLibrary,
+          exportedElement.exportedLibrary,
+          exportedElement);
     }
   }
 
@@ -4482,43 +4624,31 @@ class PackageGraph {
     return _localPublicLibraries;
   }
 
-  // Written from ModelElement.from.
-  ModelElement _objectElement;
-
-  // Return the element for "Object".
-  ModelElement get objectElement {
-    assert(_objectElement != null);
-    return _objectElement;
-  }
-
-  // Don't let this be used for canonicalization before we find it.
-  bool _interceptorUsed = false;
-  Class _interceptor;
-
-  /// Return the element for "Interceptor", a Dart implementation class intended
-  /// to function the same as Object.
-  Class get interceptor {
-    _interceptorUsed = true;
-    return _interceptor;
-  }
-
-  set interceptor(Class newInterceptor) {
-    assert(_interceptorUsed == false);
-    _interceptor = newInterceptor;
-  }
-
-  // Return the set of [Class]es objects should inherit through if they
-  // show up in the inheritance chain.  Do not call before interceptorElement is
-  // found.  Add classes here if they are similar to Interceptor in that they
-  // are to be ignored even when they are the implementors of [Inheritable]s,
-  // and the class these inherit from should instead claim implementation.
   Set<Class> _inheritThrough;
+
+  /// Return the set of [Class]es objects should inherit through if they
+  /// show up in the inheritance chain.  Do not call before interceptorElement is
+  /// found.  Add classes here if they are similar to Interceptor in that they
+  /// are to be ignored even when they are the implementors of [Inheritable]s,
+  /// and the class these inherit from should instead claim implementation.
   Set<Class> get inheritThrough {
     if (_inheritThrough == null) {
       _inheritThrough = new Set();
-      _inheritThrough.add(interceptor);
+      _inheritThrough.add(specialClasses[SpecialClass.interceptor]);
     }
     return _inheritThrough;
+  }
+
+  Set<Class> _invisibleAnnotations;
+
+  /// Returns the set of [Class] objects that are similar to pragma
+  /// in that we should never count them as documentable annotations.
+  Set<Class> get invisibleAnnotations {
+    if (_invisibleAnnotations == null) {
+      _invisibleAnnotations = new Set();
+      _invisibleAnnotations.add(specialClasses[SpecialClass.pragma]);
+    }
+    return _invisibleAnnotations;
   }
 
   /// Looks up some [Library] that is reexporting this [Element]; not
@@ -4731,16 +4861,16 @@ class PackageGraph {
     return foundLibrary;
   }
 
-  List<ModelElement> _allModelElements;
+  List<ModelElement> _allLocalModelElements;
   Iterable<ModelElement> get allLocalModelElements {
     assert(allLibrariesAdded);
-    if (_allModelElements == null) {
-      _allModelElements = [];
+    if (_allLocalModelElements == null) {
+      _allLocalModelElements = [];
       this.localLibraries.forEach((library) {
-        _allModelElements.addAll(library.allModelElements);
+        _allLocalModelElements.addAll(library.allModelElements);
       });
     }
-    return _allModelElements;
+    return _allLocalModelElements;
   }
 
   List<ModelElement> _allCanonicalModelElements;
@@ -5187,8 +5317,10 @@ class Package extends LibraryContainer
             // The full version string of the package.
             case 'v':
               return packageMeta.version;
+            default:
+              assert(false, 'Unsupported case: ${m.group(1)}');
+              return null;
           }
-          ;
         });
         if (!_baseHref.endsWith('/')) _baseHref = '${_baseHref}/';
       } else {
@@ -5687,16 +5819,23 @@ class PackageBuilder {
 
   PackageBuilder(this.config);
 
-  void logAnalysisErrors(Set<Source> sources) {}
+  Future<void> logAnalysisErrors(Set<Source> sources) async {}
 
   Future<PackageGraph> buildPackageGraph() async {
     PackageMeta packageMeta = config.topLevelPackageMeta;
     if (packageMeta.needsPubGet) {
       packageMeta.runPubGet();
     }
-    Set<LibraryElement> libraries = await getLibraries(getFiles);
-    return new PackageGraph(libraries, config, config.topLevelPackageMeta,
-        getWarningOptions(), driver, sdk);
+    Set<LibraryElement> libraries = new Set();
+    Set<LibraryElement> specialLibraries = new Set();
+    DartSdk findSpecialsSdk = sdk;
+    if (embedderSdk != null && embedderSdk.urlMappings.isNotEmpty) {
+      findSpecialsSdk = embedderSdk;
+    }
+    await getLibraries(libraries, specialLibraries, getFiles,
+        specialLibraryFiles(findSpecialsSdk).toSet());
+    return new PackageGraph(libraries, specialLibraries, config,
+        config.topLevelPackageMeta, getWarningOptions(), driver, sdk);
   }
 
   DartSdk _sdk;
@@ -5790,7 +5929,6 @@ class PackageBuilder {
       PerformanceLog log = new PerformanceLog(null);
       AnalysisDriverScheduler scheduler = new AnalysisDriverScheduler(log);
       AnalysisOptionsImpl options = new AnalysisOptionsImpl();
-      options.strongMode = true;
       options.enableSuperMixins = true;
       options.previewDart2 = true;
 
@@ -5821,6 +5959,7 @@ class PackageBuilder {
       for (PackageWarning kind in PackageWarning.values) {
         switch (kind) {
           case PackageWarning.invalidParameter:
+          case PackageWarning.unresolvedExport:
             warningOptions.error(kind);
             break;
           default:
@@ -5893,7 +6032,8 @@ class PackageBuilder {
     return metas;
   }
 
-  Future<List<LibraryElement>> _parseLibraries(Set<String> files) async {
+  Future<List<LibraryElement>> _parseLibraries(Set<String> files,
+      {bool throwErrors = true}) async {
     Set<LibraryElement> libraries = new Set();
     Set<Source> originalSources;
     Set<Source> sources = new Set<Source>();
@@ -5906,8 +6046,8 @@ class PackageBuilder {
         driver.addFile(filename);
         addedFiles.add(filename);
       });
-      await Future
-          .wait(files.map((f) => processLibrary(f, libraries, sources)));
+      await Future.wait(
+          files.map((f) => processLibrary(f, libraries, sources)));
 
       /// We don't care about upstream analysis errors, so save the first
       /// source list.
@@ -5929,7 +6069,7 @@ class PackageBuilder {
       }
     } while (!lastPass.containsAll(current));
 
-    await logAnalysisErrors(originalSources);
+    if (throwErrors) await logAnalysisErrors(originalSources);
     return libraries.toList();
   }
 
@@ -6006,9 +6146,18 @@ class PackageBuilder {
     return new Set.from(files.map((s) => new File(s).absolute.path));
   }
 
-  Future<Set<LibraryElement>> getLibraries(Set<String> files) async {
-    Set<LibraryElement> libraries = new Set();
+  Future<void> getLibraries(
+      Set<LibraryElement> libraries,
+      Set<LibraryElement> specialLibraries,
+      Set<String> files,
+      Set<String> specialFiles) async {
     libraries.addAll(await _parseLibraries(files));
+
+    /// Flutter doesn't seem to like being given the Interceptor library.
+    /// But it doesn't need it, either.  So just skip reporting errors here.
+    specialLibraries.addAll(await _parseLibraries(
+        specialFiles.difference(files),
+        throwErrors: false));
     if (config.include.isNotEmpty) {
       Iterable knownLibraryNames = libraries.map((l) => l.name);
       Set notFound = new Set.from(config.include)
@@ -6020,7 +6169,6 @@ class PackageBuilder {
       }
       libraries.removeWhere((lib) => !config.include.contains(lib.name));
     }
-    return libraries;
   }
 
   /// If [dir] contains both a `lib` directory and a `pubspec.yaml` file treat

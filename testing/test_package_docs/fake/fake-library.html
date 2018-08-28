@@ -62,19 +62,19 @@
     <h1>fake library</h1>
 
     <section class="desc markdown">
-      <h1>WOW FAKE PACKAGE IS <strong>BEST</strong> <a href="http://example.org">PACKAGE</a></h1>
+      <h1 id="wow-fake-package-is-__best__-packagepkg">WOW FAKE PACKAGE IS <strong>BEST</strong> <a href="http://example.org">PACKAGE</a></h1>
 <p>If you don't have this package yet, get it.
 Don't ask questions.</p>
 <p>Testing code <code>true</code> and <code>false</code></p>
 <p>Testing string escaping: <code>var s = 'I am a string'</code></p>
 <p>My favorite class is <a href="fake/Cool-class.html">Cool</a>.</p>
-<h2>I am an h2</h2>
+<h2 id="i-am-an-h2">I am an h2</h2>
 <p>hello there</p>
-<h3>I am an h3</h3>
+<h3 id="i-am-an-h3">I am an h3</h3>
 <p>hello there</p>
-<h4>I am an h4</h4>
+<h4 id="i-am-an-h4">I am an h4</h4>
 <p>hello there</p>
-<h5>I am an h5</h5>
+<h5 id="i-am-an-h5">I am an h5</h5>
 <p>hello</p>
 <p><em>Why should you get this package?</em></p><ul><li>We told you so.</li><li>Everyone is doing it.</li><li>It smells nice.</li></ul>
 <pre class="language-dart"><code>class Foo {
@@ -213,6 +213,12 @@ Don't ask questions.</p>
         </dt>
         <dd>
           I have a generic and it extends <a href="fake/Foo2-class.html">Foo2</a>
+        </dd>
+        <dt id="HasPragma">
+          <span class="name "><a href="fake/HasPragma-class.html">HasPragma</a></span>
+        </dt>
+        <dd>
+          This class uses a pragma annotation.
         </dd>
         <dt id="ImplementingThingy">
           <span class="name "><a href="fake/ImplementingThingy-class.html">ImplementingThingy</a></span>
@@ -357,6 +363,17 @@ class still takes precedence (#1561).
       <h2>Constants</h2>
 
       <dl class="properties">
+        <dt id="bulletDoced" class="constant">
+          <span class="name "><a href="fake/bulletDoced-constant.html">bulletDoced</a></span>
+          <span class="signature">&#8594; const String</span>
+        </dt>
+        <dd>
+          Bullet point documentation. <a href="fake/bulletDoced-constant.html">[...]</a>
+          
+  <div>
+            <span class="signature"><code>&#39;Foo bar baz&#39;</code></span>
+          </div>
+        </dd>
         <dt id="CUSTOM_CLASS" class="constant">
           <span class="name "><a href="fake/CUSTOM_CLASS-constant.html">CUSTOM_CLASS</a></span>
           <span class="signature">&#8594; const <a href="fake/ConstantClass-class.html">ConstantClass</a></span>
@@ -599,6 +616,14 @@ which is a bit redundant.
           Final property.
           <div class="features">final</div>
 </dd>
+        <dt id="mustGetThis" class="property">
+          <span class="name"><a href="fake/mustGetThis.html">mustGetThis</a></span>
+          <span class="signature">&#8594; dynamic</span>
+        </dt>
+        <dd>
+          A doc reference mentioning <code>dynamic</code>.
+          <div class="features">read-only</div>
+</dd>
         <dt id="setAndGet" class="property">
           <span class="name"><a href="fake/setAndGet.html">setAndGet</a></span>
           <span class="signature">&#8596; String</span>
@@ -617,7 +642,15 @@ which is a bit redundant.
 </dd>
         <dt id="useSomethingInAnotherPackage" class="property">
           <span class="name"><a href="fake/useSomethingInAnotherPackage.html">useSomethingInAnotherPackage</a></span>
-          <span class="signature">&#8596; Tuple2<span class="signature">&lt;<wbr><span class="type-parameter">String</span>, <span class="type-parameter">String</span>&gt;</span></span>
+          <span class="signature">&#8596; Required</span>
+        </dt>
+        <dd>
+          
+          <div class="features">read / write</div>
+</dd>
+        <dt id="useSomethingInTheSdk" class="property">
+          <span class="name"><a href="fake/useSomethingInTheSdk.html">useSomethingInTheSdk</a></span>
+          <span class="signature">&#8596; String</span>
         </dt>
         <dd>
           
@@ -943,6 +976,7 @@ default value.
       <li><a href="fake/Foo2-class.html">Foo2</a></li>
       <li><a href="fake/HasGenerics-class.html">HasGenerics</a></li>
       <li><a href="fake/HasGenericWithExtends-class.html">HasGenericWithExtends</a></li>
+      <li><a href="fake/HasPragma-class.html">HasPragma</a></li>
       <li><a href="fake/ImplementingThingy-class.html">ImplementingThingy</a></li>
       <li><a href="fake/ImplementingThingy2-class.html">ImplementingThingy2</a></li>
       <li><a href="fake/ImplementsFutureVoid-class.html">ImplementsFutureVoid</a></li>
@@ -967,6 +1001,7 @@ default value.
       <li><a href="fake/WithGetterAndSetter-class.html">WithGetterAndSetter</a></li>
     
       <li class="section-title"><a href="fake/fake-library.html#constants">Constants</a></li>
+      <li><a href="fake/bulletDoced-constant.html">bulletDoced</a></li>
       <li><a href="fake/CUSTOM_CLASS-constant.html">CUSTOM_CLASS</a></li>
       <li><a href="fake/CUSTOM_CLASS_PRIVATE-constant.html">CUSTOM_CLASS_PRIVATE</a></li>
       <li><a class="deprecated" href="fake/DOWN-constant.html">DOWN</a></li>
@@ -993,9 +1028,11 @@ default value.
       <li><a href="fake/justSetter.html">justSetter</a></li>
       <li><a href="fake/mapWithDynamicKeys.html">mapWithDynamicKeys</a></li>
       <li><a class="deprecated" href="fake/meaningOfLife.html">meaningOfLife</a></li>
+      <li><a href="fake/mustGetThis.html">mustGetThis</a></li>
       <li><a href="fake/setAndGet.html">setAndGet</a></li>
       <li><a href="fake/simpleProperty.html">simpleProperty</a></li>
       <li><a href="fake/useSomethingInAnotherPackage.html">useSomethingInAnotherPackage</a></li>
+      <li><a href="fake/useSomethingInTheSdk.html">useSomethingInTheSdk</a></li>
     
       <li class="section-title"><a href="fake/fake-library.html#functions">Functions</a></li>
       <li><a href="fake/addCallback.html">addCallback</a></li>

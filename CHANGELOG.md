@@ -1,3 +1,38 @@
+## 0.20.4
+* Hide pragma declarations from generated docs (#1726)
+* Fix problems with lists in markdown not being handled correctly (#172)
+* Properly escape types inside comment references (#1740)
+* Generate a custom page, `__404error.html`, for use as an error page (#1704)
+* Generate an error on unresolved exports instead of crashing (#1745)
+* Generate anchors for headers in markdown (#1749)
+
+## 0.20.3
+* Update dependencies and fork mustache4dart into dartdoc so dartdoc can resolve
+  dependencies on Dart 2.0 stable.
+
+## 0.20.2
+* Fix void problems (#1724)
+* Fix crash building Angular docs and problems involving special objects
+  (#1728, #1554)
+* Run pub upgrade to get packages ready for 69.2.
+
+## 0.20.1
+* Remove name parameter from `@animation` parameter handling, with backwards compatibility
+  (#1715)
+* Scrollbar width increased for main body text (#1711)
+* Make a missing FLUTTER_ROOT environment variable have a better error message
+  (#1714)
+* Add a missing static resource (#1708)
+* Add test to make sure that static resource file is automatically rebuilt
+  (#1708)
+
+## 0.20.0
+* include and exclude are now available in dartdoc_options.yaml as supported options
+  (#1700, #1674)
+* Support a new `{@animation}` directive in documentation comments to display
+  videos in a simple player.
+* Fix Dart 2.0 support (#1668) and expand test coverage to include --help.
+
 ## 0.19.1
 * Update `package:markdown` to `2.0.0`, which includes many improvements –
   especially to the parsing of links.

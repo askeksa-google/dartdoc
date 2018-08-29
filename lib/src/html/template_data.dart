@@ -132,8 +132,7 @@ class CategoryTemplateData extends TemplateData<Category> {
   String get htmlBase => '..';
 
   @override
-  String get layoutTitle =>
-      _layoutTitle(category.name, category.kind, false);
+  String get layoutTitle => _layoutTitle(category.name, category.kind, false);
 
   @override
   String get metaDescription =>

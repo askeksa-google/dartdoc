@@ -104,8 +104,8 @@ class _OptionValueWithContext<T> {
       return pathContext.canonicalize(resolveTildePath(value as String)) as T;
     } else if (value is Map<String, String>) {
       return (value as Map<String, String>)
-          .map((String mapKey, String mapValue) =>
-             new MapEntry<String, String>(mapKey, pathContext.canonicalize(resolveTildePath(mapValue))))
+          .map((String mapKey, String mapValue) => new MapEntry<String, String>(
+              mapKey, pathContext.canonicalize(resolveTildePath(mapValue))))
           .cast<String, String>() as T;
     } else {
       throw new UnsupportedError('Type $T is not supported for resolvedValue');
@@ -203,7 +203,7 @@ abstract class DartdocOption<T> {
     List<String> resolvedPaths;
     if (valueWithContext.value is String) {
       resolvedPaths = [valueWithContext.resolvedValue];
-    } else if (valueWithContext.value is List<String>){
+    } else if (valueWithContext.value is List<String>) {
       resolvedPaths = valueWithContext.resolvedValue.toList();
     } else if (valueWithContext.value is Map<String, String>) {
       resolvedPaths = valueWithContext.resolvedValue.values.toList();
@@ -932,7 +932,8 @@ class DartdocOptionContext {
   bool get autoIncludeDependencies =>
       optionSet['autoIncludeDependencies'].valueAt(context);
   List<String> get categoryOrder => optionSet['categoryOrder'].valueAt(context);
-  Map<String, String> get categoryMarkdown => optionSet['categoryMarkdown'].valueAt(context);
+  Map<String, String> get categoryMarkdown =>
+      optionSet['categoryMarkdown'].valueAt(context);
   List<String> get dropTextFrom => optionSet['dropTextFrom'].valueAt(context);
   String get examplePathPrefix =>
       optionSet['examplePathPrefix'].valueAt(context);

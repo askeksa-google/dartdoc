@@ -1972,7 +1972,6 @@ class Library extends ModelElement with Categorization, TopLevelContainer {
     return _importedExportedLibraries;
   }
 
-
   String _dirName;
   String get dirName {
     if (_dirName == null) {
@@ -2153,7 +2152,6 @@ class Library extends ModelElement with Categorization, TopLevelContainer {
     return _properties;
   }
 
-
   @override
   List<Typedef> get typedefs {
     if (_typedefs != null) return _typedefs;
@@ -2175,7 +2173,6 @@ class Library extends ModelElement with Categorization, TopLevelContainer {
 
     return _typedefs;
   }
-
 
   List<Class> get _allClasses {
     if (_classes != null) return _classes;
@@ -4506,8 +4503,7 @@ class PackageGraph {
 
   Map<LibraryElement, Set<Library>> _libraryElementReexportedBy = new Map();
   void _tagReexportsFor(
-      final Library topLevelLibrary,
-      final LibraryElement libraryElement,
+      final Library topLevelLibrary, final LibraryElement libraryElement,
       [ExportElement lastExportedElement]) {
     if (libraryElement == null) {
       // The first call to _tagReexportFor should not have a null libraryElement.
@@ -4523,9 +4519,7 @@ class PackageGraph {
     _libraryElementReexportedBy[libraryElement].add(topLevelLibrary);
     for (ExportElement exportedElement in libraryElement.exports) {
       _tagReexportsFor(
-          topLevelLibrary,
-          exportedElement.exportedLibrary,
-          exportedElement);
+          topLevelLibrary, exportedElement.exportedLibrary, exportedElement);
     }
   }
 
@@ -4995,7 +4989,8 @@ abstract class LibraryContainer extends Nameable
   }
 }
 
-abstract class MarkdownFileDocumentation implements Documentable, Canonicalization {
+abstract class MarkdownFileDocumentation
+    implements Documentable, Canonicalization {
   DocumentLocation get documentedWhere;
 
   @override
@@ -5012,10 +5007,12 @@ abstract class MarkdownFileDocumentation implements Documentable, Canonicalizati
   String get documentationAsHtml => _documentation.asHtml;
 
   @override
-  bool get hasDocumentation => documentationFile != null && documentationFile.contents.isNotEmpty;
+  bool get hasDocumentation =>
+      documentationFile != null && documentationFile.contents.isNotEmpty;
 
   @override
-  bool get hasExtendedDocumentation => documentation != null && documentation.isNotEmpty;
+  bool get hasExtendedDocumentation =>
+      documentation != null && documentation.isNotEmpty;
 
   @override
   bool get isDocumented;
@@ -5036,7 +5033,14 @@ abstract class MarkdownFileDocumentation implements Documentable, Canonicalizati
 
 /// A category is a subcategory of a package, containing libraries tagged
 /// with a @category identifier.
-class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDocumentation, LibraryContainer, TopLevelContainer implements Documentable {
+class Category extends Nameable
+    with
+        Warnable,
+        Canonicalization,
+        MarkdownFileDocumentation,
+        LibraryContainer,
+        TopLevelContainer
+    implements Documentable {
   /// All libraries in [libraries] must come from [package].
   Package package;
   String _name;
@@ -5111,7 +5115,8 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   @override
   bool get isDocumented {
     if (_isDocumented == null) {
-      _isDocumented = documentedWhere != DocumentLocation.missing && documentationFile != null;
+      _isDocumented = documentedWhere != DocumentLocation.missing &&
+          documentationFile != null;
     }
     return _isDocumented;
   }
@@ -5120,7 +5125,8 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   String get fullyQualifiedName => name;
 
   @override
-  String get href => isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
+  String get href =>
+      isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
 
   String get linkedName {
     String unbrokenCategoryName = name.replaceAll(' ', '&nbsp;');
@@ -5132,6 +5138,7 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   }
 
   String _categoryNumberClass;
+
   /// The position in the container order for this category.
   String get categoryNumberClass {
     if (_categoryNumberClass == null) {
@@ -5153,7 +5160,8 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   FileContents get documentationFile {
     if (_documentationFile == null) {
       if (config.categoryMarkdown.containsKey(name)) {
-        _documentationFile = new FileContents(new File(config.categoryMarkdown[name]));
+        _documentationFile =
+            new FileContents(new File(config.categoryMarkdown[name]));
       }
     }
     return _documentationFile;
@@ -5162,8 +5170,8 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   @override
   void warn(PackageWarning kind,
       {String message,
-        Iterable<Locatable> referredFrom,
-        Iterable<String> extendedDebug}) {
+      Iterable<Locatable> referredFrom,
+      Iterable<String> extendedDebug}) {
     packageGraph.warnOnElement(this, kind,
         message: message,
         referredFrom: referredFrom,

@@ -49,8 +49,7 @@ class HtmlGeneratorInstance {
 
   _generateCategoryJson() {
     var encoder = new JsonEncoder.withIndent('  ');
-    final List<Map> indexItems =
-        _categorizationItems.map((Categorization e) {
+    final List<Map> indexItems = _categorizationItems.map((Categorization e) {
       Map data = {
         'name': e.name,
         'qualifiedName': e.fullyQualifiedName,
@@ -214,9 +213,11 @@ class HtmlGeneratorInstance {
   void generateCategory(PackageGraph packageGraph, Category category) {
     logInfo(
         'Generating docs for category ${category.name} from ${category.package.fullyQualifiedName}...');
-    TemplateData data = new CategoryTemplateData(_options, packageGraph, category);
+    TemplateData data =
+        new CategoryTemplateData(_options, packageGraph, category);
 
-    _build(pathLib.joinAll(category.href.split('/')), _templates.categoryTemplate, data);
+    _build(pathLib.joinAll(category.href.split('/')),
+        _templates.categoryTemplate, data);
   }
 
   void generateLibrary(PackageGraph packageGraph, Library lib) {

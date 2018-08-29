@@ -127,15 +127,15 @@ void main() {
       expect(
           packageCategories.map((c) => c.name).toList(),
           orderedEquals([
+            'Excellent',
             'Real Libraries',
             'Unreal',
-            'Excellent',
             'Misc',
             'More Excellence',
             'NotSoExcellent'
           ]));
       expect(packageCategories.map((c) => c.libraries.length).toList(),
-          orderedEquals([3, 2, 0, 1, 0, 0]));
+          orderedEquals([0, 3, 2, 1, 0, 0]));
       expect(
           packageGraph
               .localPackages.first.defaultCategory.publicLibraries.length,

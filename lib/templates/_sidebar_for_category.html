@@ -1,4 +1,11 @@
 <ol>
+  {{#self.hasPublicLibraries}}
+  <li class="section-title"><a href="{{self.href}}#libraries">Libraries</a></li>
+  {{#self.publicLibraries}}
+  <li>{{{ linkedName }}}</li>
+  {{/self.publicLibraries}}
+  {{/self.hasPublicLibraries}}
+
   {{#self.hasPublicClasses}}
   <li class="section-title"><a href="{{self.href}}#classes">Classes</a></li>
   {{#self.publicClasses}}

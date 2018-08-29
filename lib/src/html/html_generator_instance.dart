@@ -25,7 +25,7 @@ class HtmlGeneratorInstance {
   final HtmlGeneratorOptions _options;
   final Templates _templates;
   final PackageGraph _packageGraph;
-  final List<ModelElement> _documentedElements = <ModelElement>[];
+  final List<Indexable> _indexedElements = <Indexable>[];
   final FileWriter _writer;
 
   HtmlGeneratorInstance(
@@ -83,7 +83,7 @@ class HtmlGeneratorInstance {
         : new JsonEncoder();
     _categorizationItems = [];
 
-    final List<Map> indexItems = _documentedElements.map((ModelElement e) {
+    final List<Map> indexItems = _indexedElements.map((Indexable e) {
       if (e is Categorization && e.hasCategorization)
         _categorizationItems.add(e);
       Map data = {
@@ -337,6 +337,6 @@ class HtmlGeneratorInstance {
         assumeNullNonExistingProperty: false, errorOnMissingProperty: true);
 
     _writer(filename, content);
-    if (data.self is ModelElement) _documentedElements.add(data.self);
+    if (data.self is Indexable) _indexedElements.add(data.self as Indexable);
   }
 }

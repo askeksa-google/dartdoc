@@ -2596,7 +2596,7 @@ abstract class Privacy {
 /// from the public interface perspective.
 abstract class ModelElement extends Canonicalization
     with Privacy, Warnable, Nameable, SourceCodeMixin
-    implements Comparable, Documentable {
+    implements Comparable, Documentable, Indexable {
   final Element _element;
   // TODO(jcollins-g): This really wants a "member that has a type" class.
   final Member _originalMember;
@@ -3251,6 +3251,7 @@ abstract class ModelElement extends Canonicalization
   }
 
   /// A human-friendly name for the kind of element this is.
+  @override
   String get kind;
 
   @override
@@ -3315,6 +3316,7 @@ abstract class ModelElement extends Canonicalization
   ModelElement get overriddenElement => null;
 
   int _overriddenDepth;
+  @override
   int get overriddenDepth {
     if (_overriddenDepth == null) {
       _overriddenDepth = 0;
@@ -4050,6 +4052,14 @@ abstract class Nameable {
     }
     return _namePieces;
   }
+}
+
+/// Something able to be indexed.
+abstract class Indexable implements Nameable {
+  String get fullyQualifiedName => name;
+  String get href;
+  String get kind;
+  int get overriddenDepth => 0;
 }
 
 class Operator extends Method {
@@ -4960,6 +4970,9 @@ abstract class LibraryContainer extends Nameable
   /// Order by which this container should be sorted.
   List<String> get containerOrder;
 
+  /// Sorting key.  [containerOrder] should contain these.
+  String get sortKey => name;
+
   @override
   String toString() => name;
 
@@ -4974,10 +4987,10 @@ abstract class LibraryContainer extends Nameable
   /// 2 if this group has a name that contains the name [enclosingName].
   /// 3 otherwise.
   int get _group {
-    if (containerOrder.contains(name)) return -1;
-    if (equalsIgnoreAsciiCase(name, enclosingName)) return 0;
+    if (containerOrder.contains(sortKey)) return -1;
+    if (equalsIgnoreAsciiCase(sortKey, enclosingName)) return 0;
     if (isSdk) return 1;
-    if (name.toLowerCase().contains(enclosingName.toLowerCase())) return 2;
+    if (sortKey.toLowerCase().contains(enclosingName.toLowerCase())) return 2;
     return 3;
   }
 
@@ -4985,10 +4998,10 @@ abstract class LibraryContainer extends Nameable
   int compareTo(LibraryContainer other) {
     if (_group == other._group) {
       if (_group == -1) {
-        return Comparable.compare(
-            containerOrder.indexOf(name), containerOrder.indexOf(other.name));
+        return Comparable.compare(containerOrder.indexOf(sortKey),
+            containerOrder.indexOf(other.sortKey));
       } else {
-        return name.toLowerCase().compareTo(other.name.toLowerCase());
+        return sortKey.toLowerCase().compareTo(other.sortKey.toLowerCase());
       }
     }
     return Comparable.compare(_group, other._group);
@@ -5045,7 +5058,8 @@ class Category extends Nameable
         Canonicalization,
         MarkdownFileDocumentation,
         LibraryContainer,
-        TopLevelContainer
+        TopLevelContainer,
+        Indexable
     implements Documentable {
   /// All libraries in [libraries] must come from [package].
   Package package;
@@ -5097,10 +5111,13 @@ class Category extends Nameable
   Element get element => null;
 
   @override
-  String get name => _name;
+  String get name => categoryDefinition?.displayName ?? _name;
 
   @override
-  List<String> get containerOrder => config.categoryOrder;
+  String get sortKey => _name;
+
+  @override
+  List<String> get containerOrder => config.categories.categoryOrder;
 
   @override
   String get enclosingName => package.name;
@@ -5156,18 +5173,22 @@ class Category extends Nameable
   /// Category name used in template as part of the class.
   String get spanClass => name.split(' ').join('-').toLowerCase();
 
-  @override
-  bool get isCanonical => config.categoryMarkdown.containsKey(name);
+  CategoryDefinition get categoryDefinition =>
+      config.categories.categoryDefinitions[sortKey];
 
+  @override
+  bool get isCanonical => categoryDefinition != null;
+
+  @override
   String get kind => 'API';
 
   FileContents _documentationFile;
   @override
   FileContents get documentationFile {
     if (_documentationFile == null) {
-      if (config.categoryMarkdown.containsKey(name)) {
-        _documentationFile =
-            new FileContents(new File(config.categoryMarkdown[name]));
+      if (categoryDefinition?.documentationMarkdown != null) {
+        _documentationFile = new FileContents(
+            new File(categoryDefinition.documentationMarkdown));
       }
     }
     return _documentationFile;

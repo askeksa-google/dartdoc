@@ -127,7 +127,7 @@ void main() {
       expect(
           packageCategories.map((c) => c.name).toList(),
           orderedEquals([
-            'Excellent',
+            'Superb',
             'Real Libraries',
             'Unreal',
             'Misc',

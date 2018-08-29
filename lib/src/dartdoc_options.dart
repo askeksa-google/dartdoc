@@ -56,6 +56,65 @@ class DartdocFileMissing extends DartdocOptionError {
   DartdocFileMissing(String details) : super(details);
 }
 
+class CategoryDefinition {
+  /// Internal name of the category.
+  final String name;
+
+  /// Displayed name of the category in docs, or null if there is none.
+  final String _displayName;
+
+  /// Canonical path of the markdown file used to document this category
+  /// (or null if undocumented).
+  final String documentationMarkdown;
+  CategoryDefinition(this.name, this._displayName, this.documentationMarkdown);
+
+  /// Returns the [_displayName], if available.
+  String get displayName => _displayName ?? name;
+}
+
+class CategoryConfiguration {
+  /// A map of [CategoryDefinition.name] to [CategoryDefinition] objects.
+  final Map<String, CategoryDefinition> categoryDefinitions;
+
+  /// The defined order for categories.
+  List<String> categoryOrder;
+
+  CategoryConfiguration._(this.categoryDefinitions, this.categoryOrder);
+
+  static CategoryConfiguration get empty {
+    return new CategoryConfiguration._({}, []);
+  }
+
+  static CategoryConfiguration fromYamlMap(
+      YamlMap yamlMap, pathLib.Context pathContext) {
+    List<String> categoriesInOrder = [];
+    Map<String, CategoryDefinition> newCategoryDefinitions = {};
+    for (MapEntry entry in yamlMap.entries) {
+      String name = entry.key.toString();
+      String displayName;
+      String documentationMarkdown;
+      categoriesInOrder.add(name);
+      var categoryMap = entry.value;
+      if (categoryMap is Map) {
+        displayName = categoryMap['displayName']?.toString();
+        documentationMarkdown = categoryMap['markdown']?.toString();
+        if (documentationMarkdown != null) {
+          documentationMarkdown =
+              pathContext.canonicalize(documentationMarkdown);
+          if (!new File(documentationMarkdown).existsSync()) {
+            throw new DartdocFileMissing(
+                'In categories definition for ${name}, "markdown" resolves to the missing file $documentationMarkdown');
+          }
+        }
+        newCategoryDefinitions[name] =
+            new CategoryDefinition(name, displayName, documentationMarkdown);
+      }
+    }
+    return new CategoryConfiguration._(
+        newCategoryDefinitions, categoriesInOrder);
+  }
+}
+
 /// A container class to keep track of where our yaml data came from.
 class _YamlFileData {
   /// The map from the yaml file.
@@ -155,7 +214,7 @@ abstract class DartdocOption<T> {
   }
 
   /// Closure to convert yaml data into some other structure.
-  T Function(YamlMap) _convertYamlToType;
+  T Function(YamlMap, pathLib.Context) _convertYamlToType;
 
   // The choice not to use reflection means there's some ugly type checking,
   // somewhat more ugly than we'd have to do anyway to automatically convert
@@ -325,7 +384,7 @@ class DartdocOptionFileSynth<T> extends DartdocOption<T>
       bool isDir = false,
       bool isFile = false,
       bool parentDirOverridesChild,
-      T Function(YamlMap) convertYamlToType})
+      T Function(YamlMap, pathLib.Context) convertYamlToType})
       : super._(name, null, help, isDir, isFile, mustExist, convertYamlToType) {
     _parentDirOverridesChild = parentDirOverridesChild;
   }
@@ -589,7 +648,7 @@ class DartdocOptionFileOnly<T> extends DartdocOption<T>
       bool isDir = false,
       bool isFile = false,
       bool parentDirOverridesChild: false,
-      T Function(YamlMap) convertYamlToType})
+      T Function(YamlMap, pathLib.Context) convertYamlToType})
       : super._(name, defaultsTo, help, isDir, isFile, mustExist,
             convertYamlToType) {
     _parentDirOverridesChild = parentDirOverridesChild;
@@ -693,8 +752,15 @@ abstract class _DartdocFileOption<T> implements DartdocOption<T> {
         }
       }
     } else if (yamlData is YamlMap) {
+      // TODO(jcollins-g): This special casing is unfortunate.  Consider
+      // a refactor to extract yaml data conversion into closures 100% of the
+      // time or find a cleaner way to do this.
+      //
+      // A refactor probably would integrate resolvedValue for
+      // _OptionValueWithContext into the return data here, and would not have
+      // that be separate.
       if (_isMapString && _convertYamlToType == null) {
-        _convertYamlToType = (YamlMap yamlMap) {
+        _convertYamlToType = (YamlMap yamlMap, pathLib.Context pathContext) {
           var returnData = <String, String>{};
           for (MapEntry entry in yamlMap.entries) {
             returnData[entry.key.toString()] = entry.value.toString();
@@ -702,7 +768,13 @@ abstract class _DartdocFileOption<T> implements DartdocOption<T> {
           return returnData as T;
         };
       }
-      returnData = _convertYamlToType(yamlData);
+      if (_convertYamlToType == null) {
+        throw new DartdocOptionError(
+            'Unable to convert yaml to type for option: $fieldName, method not defined');
+      }
+      String canonicalDirectoryPath = pathLib.canonicalize(contextPath);
+      returnData = _convertYamlToType(
+          yamlData, new pathLib.Context(current: canonicalDirectoryPath));
     } else if (_isDouble) {
       if (yamlData is num) {
         returnData = yamlData.toDouble();
@@ -941,9 +1013,8 @@ class DartdocOptionContext {
       optionSet['ambiguousReexportScorerMinConfidence'].valueAt(context);
   bool get autoIncludeDependencies =>
       optionSet['autoIncludeDependencies'].valueAt(context);
-  List<String> get categoryOrder => optionSet['categoryOrder'].valueAt(context);
-  Map<String, String> get categoryMarkdown =>
-      optionSet['categoryMarkdown'].valueAt(context);
+  CategoryConfiguration get categories =>
+      optionSet['categories'].valueAt(context);
   List<String> get dropTextFrom => optionSet['dropTextFrom'].valueAt(context);
   String get examplePathPrefix =>
       optionSet['examplePathPrefix'].valueAt(context);
@@ -1005,15 +1076,11 @@ Future<List<DartdocOption>> createDartdocOptions() async {
         help:
             'Include all the used libraries into the docs, even the ones not in the current package or "include-external"',
         negatable: true),
-    new DartdocOptionArgFile<List<String>>('categoryOrder', [],
+    new DartdocOptionFileOnly<CategoryConfiguration>(
+        'categories', CategoryConfiguration.empty,
+        convertYamlToType: CategoryConfiguration.fromYamlMap,
         help:
-            "A list of categories (not package names) to place first when grouping symbols on dartdoc's sidebar. "
-            'Unmentioned categories are sorted after these.'),
-    new DartdocOptionFileOnly<Map<String, String>>('categoryMarkdown', {},
-        help:
-            "A map of category name to markdown for generating category pages.",
-        isFile: true,
-        mustExist: true),
+            "A list of all categories, their display names, and markdown documentation in the order they are to be displayed."),
     new DartdocOptionSyntheticOnly<List<String>>('dropTextFrom',
         (DartdocSyntheticOption<List<String>> option, Directory dir) {
       if (option.parent['hideSdkText'].valueAt(dir)) {

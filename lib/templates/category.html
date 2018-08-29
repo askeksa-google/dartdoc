@@ -1,12 +1,13 @@
 {{>head}}
 
   <div class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left">
-    <h5><span class="category-name">{{self.name}}</span> <span class="category-kind">{{self.kind}}</span></h5>
-    {{>sidebar_for_category}}
+    <h5><span class="package-name">{{parent.name}}</span> <span class="package-kind">{{parent.kind}}</span></h5>
+    {{>packages}}
   </div>
 
   <div class="col-xs-12 col-sm-9 col-md-8 main-content">
     {{#self}}
+      <h1>{{name}} {{kind}}</h1>
       {{>documentation}}
 
       {{#hasPublicLibraries}}
@@ -107,5 +108,8 @@
     {{/self}}
 
   </div> <!-- /.main-content -->
-
+  <div class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+    <h5>{{self.name}} {{self.kind}}</h5>
+    {{>sidebar_for_category}}
+  </div><!--/sidebar-offcanvas-right-->
 {{>footer}}

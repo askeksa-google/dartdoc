@@ -711,6 +711,7 @@ class ExtraSpecialList<E> extends SpecialList {}
 /// Category information should not follow inheritance.
 ///
 /// {@category Excellent}
+/// {@category Unreal}
 /// {@category More Excellence}
 /// {@subCategory Things and Such}
 /// {@image https://flutter.io/images/catalog-widget-placeholder.png}

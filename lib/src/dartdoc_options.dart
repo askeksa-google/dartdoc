@@ -146,13 +146,16 @@ abstract class DartdocOption<T> {
   final bool mustExist;
 
   DartdocOption._(this.name, this.defaultsTo, this.help, this.isDir,
-      this.isFile, this.mustExist) {
+      this.isFile, this.mustExist, this._convertYamlToType) {
     assert(!(isDir && isFile));
     if (isDir || isFile) assert(_isString || _isListString || _isMapString);
     if (mustExist) {
       assert(isDir || isFile);
     }
   }
+
+  /// Closure to convert yaml data into some other structure.
+  T Function(YamlMap) _convertYamlToType;
 
   // The choice not to use reflection means there's some ugly type checking,
   // somewhat more ugly than we'd have to do anyway to automatically convert
@@ -321,8 +324,9 @@ class DartdocOptionFileSynth<T> extends DartdocOption<T>
       String help = '',
       bool isDir = false,
       bool isFile = false,
-      bool parentDirOverridesChild})
-      : super._(name, null, help, isDir, isFile, mustExist) {
+      bool parentDirOverridesChild,
+      T Function(YamlMap) convertYamlToType})
+      : super._(name, null, help, isDir, isFile, mustExist, convertYamlToType) {
     _parentDirOverridesChild = parentDirOverridesChild;
   }
 
@@ -369,7 +373,7 @@ class DartdocOptionArgSynth<T> extends DartdocOption<T>
       bool isFile = false,
       bool negatable,
       bool splitCommas})
-      : super._(name, null, help, isDir, isFile, mustExist) {
+      : super._(name, null, help, isDir, isFile, mustExist, null) {
     _hide = hide;
     _negatable = negatable;
     _splitCommas = splitCommas;
@@ -415,7 +419,7 @@ class DartdocOptionSyntheticOnly<T> extends DartdocOption<T>
       String help = '',
       bool isDir = false,
       bool isFile = false})
-      : super._(name, null, help, isDir, isFile, mustExist);
+      : super._(name, null, help, isDir, isFile, mustExist, null);
 }
 
 abstract class DartdocSyntheticOption<T> implements DartdocOption<T> {
@@ -449,7 +453,7 @@ typedef Future<List<DartdocOption>> OptionGenerator();
 /// A [DartdocOption] that only contains other [DartdocOption]s and is not an option itself.
 class DartdocOptionSet extends DartdocOption<Null> {
   DartdocOptionSet(String name)
-      : super._(name, null, null, false, false, false);
+      : super._(name, null, null, false, false, false, null);
 
   /// Asynchronous factory that is the main entry point to initialize Dartdoc
   /// options for use.
@@ -500,7 +504,7 @@ class DartdocOptionArgOnly<T> extends DartdocOption<T>
       bool isFile = false,
       bool negatable,
       bool splitCommas})
-      : super._(name, defaultsTo, help, isDir, isFile, mustExist) {
+      : super._(name, defaultsTo, help, isDir, isFile, mustExist, null) {
     _hide = hide;
     _negatable = negatable;
     _splitCommas = splitCommas;
@@ -536,7 +540,7 @@ class DartdocOptionArgFile<T> extends DartdocOption<T>
       bool negatable,
       bool parentDirOverridesChild: false,
       bool splitCommas})
-      : super._(name, defaultsTo, help, isDir, isFile, mustExist) {
+      : super._(name, defaultsTo, help, isDir, isFile, mustExist, null) {
     _abbr = abbr;
     _hide = hide;
     _negatable = negatable;
@@ -584,8 +588,10 @@ class DartdocOptionFileOnly<T> extends DartdocOption<T>
       String help: '',
       bool isDir = false,
       bool isFile = false,
-      bool parentDirOverridesChild: false})
-      : super._(name, defaultsTo, help, isDir, isFile, mustExist) {
+      bool parentDirOverridesChild: false,
+      T Function(YamlMap) convertYamlToType})
+      : super._(name, defaultsTo, help, isDir, isFile, mustExist,
+            convertYamlToType) {
     _parentDirOverridesChild = parentDirOverridesChild;
   }
 
@@ -686,13 +692,17 @@ abstract class _DartdocFileOption<T> implements DartdocOption<T> {
           returnData.add(item.toString());
         }
       }
-    } else if (_isMapString) {
-      if (yamlData is YamlMap) {
-        returnData = <String, String>{};
-        for (MapEntry entry in yamlData.entries) {
-          returnData[entry.key.toString()] = entry.value.toString();
-        }
+    } else if (yamlData is YamlMap) {
+      if (_isMapString && _convertYamlToType == null) {
+        _convertYamlToType = (YamlMap yamlMap) {
+          var returnData = <String, String>{};
+          for (MapEntry entry in yamlMap.entries) {
+            returnData[entry.key.toString()] = entry.value.toString();
+          }
+          return returnData as T;
+        };
       }
+      returnData = _convertYamlToType(yamlData);
     } else if (_isDouble) {
       if (yamlData is num) {
         returnData = yamlData.toDouble();
@@ -964,6 +974,8 @@ class DartdocOptionContext {
   List<String> get packageOrder => optionSet['packageOrder'].valueAt(context);
   bool get sdkDocs => optionSet['sdkDocs'].valueAt(context);
   String get sdkDir => optionSet['sdkDir'].valueAt(context);
+  bool get showUndocumentedCategories =>
+      optionSet['showUndocumentedCategories'].valueAt(context);
   bool get showWarnings => optionSet['showWarnings'].valueAt(context);
   PackageMeta get topLevelPackageMeta =>
       optionSet['topLevelPackageMeta'].valueAt(context);
@@ -984,6 +996,7 @@ Future<List<DartdocOption>> createDartdocOptions() async {
     new DartdocOptionArgOnly<bool>('addCrossdart', false,
         help: 'Add Crossdart links to the source code pieces.',
         negatable: true),
+
     new DartdocOptionArgFile<double>(
         'ambiguousReexportScorerMinConfidence', 0.1,
         help:
@@ -1142,6 +1155,8 @@ Future<List<DartdocOption>> createDartdocOptions() async {
       }
       return defaultSdkDir.absolute.path;
     }, help: 'Path to the SDK directory.', isDir: true, mustExist: true),
+    new DartdocOptionArgFile<bool>('showUndocumentedCategories', false,
+        help: "Label categories that aren't documented", negatable: true),
     new DartdocOptionArgOnly<bool>('showWarnings', false,
         help: 'Display all warnings.', negatable: false),
     new DartdocOptionSyntheticOnly<PackageMeta>('topLevelPackageMeta',

@@ -36,6 +36,90 @@
   }
  },
  {
+  "name": "categoriesExported",
+  "qualifiedName": "categoriesExported",
+  "href": "categoriesExported/categoriesExported-library.html",
+  "type": "library",
+  "overriddenDepth": 0
+ },
+ {
+  "name": "IAmAClassWithCategories",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories",
+  "href": "categoriesExported/IAmAClassWithCategories-class.html",
+  "type": "class",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "categoriesExported",
+   "type": "library"
+  }
+ },
+ {
+  "name": "IAmAClassWithCategories",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories",
+  "href": "categoriesExported/IAmAClassWithCategories/IAmAClassWithCategories.html",
+  "type": "constructor",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
+  "name": "operator ==",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories.==",
+  "href": "categoriesExported/IAmAClassWithCategories/operator_equals.html",
+  "type": "method",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
+  "name": "hashCode",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories.hashCode",
+  "href": "categoriesExported/IAmAClassWithCategories/hashCode.html",
+  "type": "property",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
+  "name": "noSuchMethod",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories.noSuchMethod",
+  "href": "categoriesExported/IAmAClassWithCategories/noSuchMethod.html",
+  "type": "method",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
+  "name": "runtimeType",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories.runtimeType",
+  "href": "categoriesExported/IAmAClassWithCategories/runtimeType.html",
+  "type": "property",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
+  "name": "toString",
+  "qualifiedName": "categoriesExported.IAmAClassWithCategories.toString",
+  "href": "categoriesExported/IAmAClassWithCategories/toString.html",
+  "type": "method",
+  "overriddenDepth": 0,
+  "enclosedBy": {
+   "name": "IAmAClassWithCategories",
+   "type": "class"
+  }
+ },
+ {
   "name": "code_in_comments",
   "qualifiedName": "code_in_comments",
   "href": "code_in_comments/code_in_comments-library.html",

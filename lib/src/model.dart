@@ -1276,9 +1276,15 @@ abstract class Categorization implements ModelElement {
   Iterable<Category> _categories;
   Iterable<Category> get categories {
     if (_categories == null) {
-      _categories = categoryNames.map((n) => package.nameToCategory[n]);
+      _categories = categoryNames
+          .map((n) => packageGraph.defaultPackage.nameToCategory[n]);
     }
     return _categories;
+  }
+
+  Iterable<Category> get displayedCategories {
+    if (config.showUndocumentedCategories) return categories;
+    return categories.where((c) => c.isDocumented);
   }
 
   /// True if categories, subcategories, a documentation icon, or samples were
@@ -5409,6 +5415,10 @@ class Package extends LibraryContainer
 
   Iterable<LibraryContainer> get categoriesWithPublicLibraries =>
       categories.where((c) => c.publicLibraries.isNotEmpty);
+
+  Iterable<Category> get documentedCategories =>
+      categories.where((c) => c.isDocumented);
+  bool get hasDocumentedCategories => documentedCategories.isNotEmpty;
 
   DartdocOptionContext _config;
   @override

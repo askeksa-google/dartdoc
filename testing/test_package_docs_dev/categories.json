@@ -1,5 +1,14 @@
 [
   {
+    "name": "IAmAClassWithCategories",
+    "qualifiedName": "categoriesExported.IAmAClassWithCategories",
+    "href": "categoriesExported/IAmAClassWithCategories-class.html",
+    "type": "class",
+    "categories": [
+      "Excellent"
+    ]
+  },
+  {
     "name": "css",
     "qualifiedName": "css",
     "href": "css/css-library.html",
@@ -33,7 +42,8 @@
     "type": "class",
     "categories": [
       "Excellent",
-      "More Excellence"
+      "More Excellence",
+      "Unreal"
     ],
     "subcategories": [
       "Things and Such"

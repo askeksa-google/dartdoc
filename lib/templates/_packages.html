@@ -1,6 +1,12 @@
 <ol>
   {{#packageGraph.localPackages}}
     {{#isFirstPackage}}
+      {{#hasDocumentedCategories}}
+      <li class="section-title">APIs</li>
+        {{#documentedCategories}}
+        <li>{{{linkedName}}}</li>
+        {{/documentedCategories}}
+      {{/hasDocumentedCategories}}
       <li class="section-title">Libraries</li>
     {{/isFirstPackage}}
     {{^isFirstPackage}}

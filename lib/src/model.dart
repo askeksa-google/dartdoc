@@ -195,6 +195,9 @@ abstract class Inheritable implements ModelElement {
     assert(inheritance.where((e) => e == object).length == 1);
     return inheritance;
   }
+
+  /// A stub for mustache4dart; do not allow categories for class members.
+  List<Category> get categories => [];
 }
 
 /// A getter or setter that is a member of a Class.
@@ -1271,7 +1274,12 @@ abstract class Categorization implements ModelElement {
   bool _hasCategorization;
 
   Iterable<Category> _categories;
-  Iterable<Category> get categories => categoryNames.map((n) => package.nameToCategory[n]);
+  Iterable<Category> get categories {
+    if (_categories == null) {
+      _categories = categoryNames.map((n) => package.nameToCategory[n]);
+    }
+    return _categories;
+  }
 
   /// True if categories, subcategories, a documentation icon, or samples were
   /// declared.
@@ -4943,6 +4951,7 @@ abstract class LibraryContainer extends Nameable
 
   PackageGraph get packageGraph;
   Iterable<Library> get publicLibraries => filterNonPublic(libraries);
+  bool get hasPublicLibraries => publicLibraries.isNotEmpty;
 
   /// The name of the container or object that this LibraryContainer is a part
   /// of.  Used for sorting in [containerOrder].
@@ -5114,10 +5123,11 @@ class Category extends Nameable with Warnable, Canonicalization, MarkdownFileDoc
   String get href => isCanonical ? '${package.baseHref}apis/${name}-api.html' : null;
 
   String get linkedName {
+    String unbrokenCategoryName = name.replaceAll(' ', '&nbsp;');
     if (isDocumented) {
-      return '<a href="$href">${name.replaceAll(' ', '&nbsp;')}</a>';
+      return '<a href="$href">$unbrokenCategoryName</a>';
     } else {
-     return name;
+      return unbrokenCategoryName;
     }
   }
 

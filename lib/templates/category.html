@@ -8,18 +8,26 @@
   <div class="col-xs-12 col-sm-9 col-md-8 main-content">
     {{#self}}
       {{>documentation}}
+
+      {{#hasPublicLibraries}}
+        <section class="summary offset-anchor" id="libraries">
+        <h2>Libraries</h2>
+
+        <dl>
+          {{#publicLibraries}}
+            {{>library}}
+          {{/publicLibraries}}
+        </dl>
+        </section>
+      {{/hasPublicLibraries}}
+
       {{#hasPublicClasses}}
         <section class="summary offset-anchor" id="classes">
         <h2>Classes</h2>
 
         <dl>
           {{#publicClasses}}
-          <dt id="{{htmlId}}">
-            <span class="name {{#isDeprecated}}deprecated{{/isDeprecated}}">{{{linkedName}}}{{{linkedGenericParameters}}}</span>
-          </dt>
-          <dd>
-            {{{ oneLineDoc }}}
-          </dd>
+            {{>class}}
           {{/publicClasses}}
         </dl>
       </section>
@@ -31,7 +39,7 @@
 
         <dl class="properties">
           {{#publicConstants}}
-          {{>constant}}
+            {{>constant}}
           {{/publicConstants}}
         </dl>
       </section>
@@ -43,7 +51,7 @@
 
         <dl class="properties">
           {{#publicProperties}}
-          {{>property}}
+            {{>property}}
           {{/publicProperties}}
         </dl>
       </section>
@@ -55,7 +63,7 @@
 
         <dl class="callables">
           {{#publicFunctions}}
-          {{>callable}}
+            {{>callable}}
           {{/publicFunctions}}
         </dl>
       </section>
@@ -67,12 +75,7 @@
 
         <dl>
           {{#publicEnums}}
-          <dt id="{{htmlId}}">
-            {{{linkedName}}}
-          </dt>
-          <dd>
-            {{{ oneLineDoc }}}
-          </dd>
+            {{>class}}
           {{/publicEnums}}
         </dl>
       </section>
@@ -84,7 +87,7 @@
 
         <dl class="callables">
           {{#publicTypedefs}}
-          {{>callable}}
+            {{>callable}}
           {{/publicTypedefs}}
         </dl>
       </section>
@@ -96,12 +99,7 @@
 
         <dl>
           {{#publicExceptions}}
-          <dt id="{{htmlId}}">
-            <span class="name {{#isDeprecated}}deprecated{{/isDeprecated}}">{{{linkedName}}}</span>
-          </dt>
-          <dd>
-            {{{ oneLineDoc }}}
-          </dd>
+            {{>class}}
           {{/publicExceptions}}
         </dl>
       </section>
